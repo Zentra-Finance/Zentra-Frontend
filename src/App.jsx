@@ -1,14 +1,21 @@
-import React from 'react'
-import RootLayout from './layouts/Layout'
+import React from "react";
+import RootLayout from "./layouts/Layout";
+import { Routes, Route, Navigate } from "react-router-dom";
+import Staking from "@/pages/Staking/Staking";
 
 const App = () => {
   return (
-    <RootLayout>
-      <div className=''>
-        <h1 className='text-5xl text-center text-blue-400'>Hello World</h1>
-      </div>
-    </RootLayout>
-  )
-}
+    // <Routes>
+    //   <Route element={<RootLayout />}>
+    //     <Route path="/" element />
+    //     <Route path="/staking" element={<Staking />} />
+    //   </Route>
+    // </Routes>
 
-export default App
+    <RootLayout>
+      <Staking/>
+    </RootLayout>
+  );
+};
+
+export default App;

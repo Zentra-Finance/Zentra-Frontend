@@ -1,6 +1,5 @@
-"use client"
-
-import * as React from "react"
+import * as React from "react";
+import { useState, useEffect } from "react";
 import {
   Wallet,
   Rocket,
@@ -12,107 +11,60 @@ import {
   Lock,
   HelpCircle,
   ChevronRight,
+  ChevronLeft,
+  Zap,
+  Sparkles,
   Menu,
   X,
-  Sparkles,
-  Zap,
-} from "lucide-react"
-
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenuButton,
-  SidebarProvider,
-  SidebarRail,
-  SidebarTrigger,
-  useSidebar,
-} from "@/components/ui/sidebar"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import ConnectButton from "./ui/ConnectButton";
+import ConnectWallet from "./ui/ConnectButton";
 
 // Navigation items with icons
 const viewItems = [
-  { name: "Launchpad", href: "#", icon: Rocket },
-  { name: "Sol Launch", href: "#", icon: Layers },
-  { name: "$DEFI 🔥", href: "#", icon: BarChart3 },
-  { name: "Staking", href: "#", icon: Coins },
-  { name: "Portfolio", href: "#", icon: Wallet },
-]
+  { id: "launchpad", name: "Launchpad", href: "/", icon: Rocket },
+  { id: "defi", name: "$DEFI 🔥", href: "/defi", icon: BarChart3 },
+  { id: "staking", name: "Staking", href: "/staking", icon: Coins },
+  { id: "portfolio", name: "Portfolio", href: "/portfolio", icon: Wallet },
+];
 
 const createItems = [
-  { name: "Meme Coin 🔥", href: "#", icon: Coins },
-  { name: "Fair Launch", href: "#", icon: Users },
-  { name: "Pump Launch", href: "#", icon: BarChart3 },
-  { name: "Airdrop", href: "#", icon: FlagIcon },
-  { name: "Lock", href: "#", icon: Lock },
-  { name: "Create", href: "#", icon: null },
-  { name: "Token List", href: "#", icon: null },
-  { name: "LP List", href: "#", icon: null },
-]
+  { id: "meme-coin", name: "Meme Coin 🔥", href: "/meme-coin", icon: Coins },
+  { id: "fair-launch", name: "Fair Launch", href: "/fair-launch", icon: Users },
+  {
+    id: "pump-launch",
+    name: "Pump Launch",
+    href: "/pump-launch",
+    icon: BarChart3,
+  },
+  { id: "airdrop", name: "Airdrop", href: "/airdrop", icon: FlagIcon },
+  { id: "lock", name: "Lock", href: "/lock", icon: Lock },
+];
 
-const helpItems = [{ name: "HELP", href: "#", icon: HelpCircle }]
 
-export function SidebarLayout({ children, className }) {
-  return (
-    <SidebarProvider>
-      <div className="flex min-h-screen flex-col bg-[#0d1117] w-full">
-        <Header />
-        <div className="flex flex-1">
-          <AppSidebar />
-          <MainContent className={className}>{children}</MainContent>
-        </div>
-      </div>
-    </SidebarProvider>
-  );
-}
+const helpItems = [{ id: "help", name: "HELP", href: "#", icon: HelpCircle }];
 
-// Separate component for the main content to use useSidebar hook safely
-function MainContent({ children, className }) {
-  return (
-    <SidebarInset className={cn("flex-1 bg-[#0d1117] text-white", className)}>
-      <div className="p-6">
-        {/* <ToggleSidebarButton /> */}
-        {children}
-      </div>
-    </SidebarInset>
-  );
-}
-
-function ToggleSidebarButton() {
-  const { state, toggleSidebar } = useSidebar()
-
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={toggleSidebar}
-      className="mb-6 border-[#1e2a3b] bg-[#111827] text-white hover:bg-[#1e2a3b]"
-    >
-      <Menu className="mr-2 h-4 w-4" />
-      {state === "collapsed" ? "Expand" : "Collapse"} Sidebar
-    </Button>
-  )
-}
-
+// ZentraLogo component
 function ZentraLogo() {
   return (
     <div className="flex items-center">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#6366f1] to-[#06b6d4]">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#018ABD] to-[#97CBDC]">
         <Zap className="h-5 w-5 text-white" />
       </div>
-      <span className="ml-2 text-xl font-bold tracking-tight text-white">Zentra</span>
+      <span className="ml-2 text-xl font-bold tracking-tight text-white">
+        Zentra
+      </span>
     </div>
-  )
+  );
 }
 
+// Header component
 function Header() {
-  const [isMenuOpen, setIsMenuOpen] = React.useState(false)
+  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[#1e2a3b] bg-[#111827] bg-opacity-80 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-[#97CBDC]/30 bg-[#004581] bg-opacity-95 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
         <div className="flex justify-between space-x-6">
           <ZentraLogo />
@@ -123,7 +75,7 @@ function Header() {
                 <li key={item}>
                   <a
                     href="#"
-                    className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 transition-colors hover:bg-[#1e2a3b] hover:text-white"
+                    className="rounded-md px-3 py-2 text-sm font-medium text-[#DDE8F0] transition-colors hover:bg-[#018ABD]/40 hover:text-white"
                   >
                     {item}
                   </a>
@@ -134,136 +86,233 @@ function Header() {
         </div>
 
         <div className="flex items-center space-x-4">
-          <div className="hidden items-center rounded-lg border border-[#1e2a3b] bg-[#0d1117] px-3 py-1.5 md:flex">
-            <span className="text-xs font-medium text-gray-400">MARKET CAP</span>
-            <span className="ml-1.5 text-xs font-semibold text-[#06b6d4]">$24,055</span>
+          <div className="hidden items-center rounded-lg border border-[#97CBDC]/30 bg-[#004581]/80 px-3 py-1.5 md:flex">
+            <span className="text-xs font-medium text-[#97CBDC]">
+              MARKET CAP
+            </span>
+            <span className="ml-1.5 text-xs font-semibold text-white">
+              $24,055
+            </span>
           </div>
 
-          <Button
-            size="sm"
-            className="hidden h-9 rounded-lg bg-gradient-to-r from-[#6366f1] to-[#06b6d4] text-xs font-medium text-white hover:opacity-90 md:flex"
-          >
+          <button className="hidden p-2 text-center rounded-lg bg-gradient-to-r from-[#018ABD] to-[#97CBDC] text-sm font-medium text-white hover:opacity-90 md:flex">
             <Sparkles className="mr-1.5 h-3.5 w-3.5" />
             BUY $DEFI
-          </Button>
+          </button>
 
-          <Button
-            size="sm"
-            className="h-9 rounded-lg bg-[#1e2a3b] px-4 text-sm font-medium text-white hover:bg-[#2d3a4b]"
+          <ConnectWallet />
+
+          <button
+            className="text-white md:hidden"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
-            Connect Wallet
-          </Button>
-
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-            {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
+            {isMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </button>
         </div>
       </div>
 
       {/* Mobile menu */}
       {isMenuOpen && (
-        <div className="border-t border-[#1e2a3b] bg-[#111827] px-4 py-3 md:hidden">
+        <div className="border-t border-[#97CBDC]/30 bg-[#004581] px-4 py-3 md:hidden">
           <nav>
             <ul className="space-y-2">
               {["Dashboard", "Markets", "Trade", "Earn"].map((item) => (
                 <li key={item}>
                   <a
                     href="#"
-                    className="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-[#1e2a3b] hover:text-white"
+                    className="block rounded-md px-3 py-2 text-base font-medium text-[#DDE8F0] hover:bg-[#018ABD]/40 hover:text-white"
                   >
                     {item}
                   </a>
                 </li>
               ))}
             </ul>
-            <div className="mt-4 flex items-center justify-between rounded-lg border border-[#1e2a3b] bg-[#0d1117] px-3 py-2">
-              <span className="text-sm font-medium text-gray-400">MARKET CAP</span>
-              <span className="text-sm font-semibold text-[#06b6d4]">$24,055</span>
+            <div className="mt-4 flex items-center justify-between rounded-lg border border-[#97CBDC]/30 bg-[#004581]/80 px-3 py-2">
+              <span className="text-sm font-medium text-[#97CBDC]">
+                MARKET CAP
+              </span>
+              <span className="text-sm font-semibold text-white">$24,055</span>
             </div>
-            <Button
-              size="sm"
-              className="mt-3 w-full rounded-lg bg-gradient-to-r from-[#6366f1] to-[#06b6d4] py-2 text-sm font-medium text-white hover:opacity-90"
-            >
+            <button className="mt-3 w-full rounded-lg bg-gradient-to-r from-[#018ABD] to-[#97CBDC] py-2 text-sm font-medium text-white hover:opacity-90">
               <Sparkles className="mr-1.5 h-4 w-4" />
               BUY $DEFI
-            </Button>
+            </button>
           </nav>
         </div>
       )}
     </header>
-  )
+  );
 }
 
-function AppSidebar() {
+export function ZentraSidebar() {
+  const [collapsed, setCollapsed] = useState(false);
+  const [activeItem, setActiveItem] = useState("launchpad");
+
+  // Check current route and set active item on component mount and when location changes
+  useEffect(() => {
+    const updateActiveItemFromPath = () => {
+      // Get current path
+      const path = window.location.pathname;
+
+      // Find matching item from all navigation items
+      const allItems = [...viewItems, ...createItems, ...helpItems];
+      const matchingItem = allItems.find((item) => item.href === path);
+
+      if (matchingItem) {
+        setActiveItem(matchingItem.id);
+      } else {
+        // If no exact match, check for path prefix
+        const matchingPrefix = allItems.find(
+          (item) => item.href !== "/" && path.startsWith(item.href)
+        );
+
+        if (matchingPrefix) {
+          setActiveItem(matchingPrefix.id);
+        } else if (path === "/") {
+          // Default to launchpad for home route
+          setActiveItem("launchpad");
+        }
+      }
+    };
+
+    // Run once on mount
+    updateActiveItemFromPath();
+
+    // Listen for route changes
+    // Note: This is a simplified approach. For frameworks like Next.js or React Router,
+    // you'd use their specific hooks for route detection.
+    const handleRouteChange = () => {
+      updateActiveItemFromPath();
+    };
+
+    window.addEventListener("popstate", handleRouteChange);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener("popstate", handleRouteChange);
+    };
+  }, []);
+
+  // Function to handle navigation
+  const handleNavigation = (e, item) => {
+    if (item.href === "#") {
+      e.preventDefault();
+    }
+    setActiveItem(item.id);
+  };
+
   return (
-    <Sidebar collapsible="icon" className="border-r border-[#1e2a3b] bg-[#111827] text-white">
-      <SidebarHeader className="border-b border-[#1e2a3b] p-4">
-        <div className="flex items-center justify-between">
-          <ZentraLogo />
-          <SidebarTrigger className="flex h-8 w-8 items-center justify-center rounded-md bg-[#1e2a3b] text-gray-400 hover:bg-[#2d3a4b] hover:text-white transition-colors">
-            <ChevronRight className="h-5 w-5" />
-          </SidebarTrigger>
-        </div>
-      </SidebarHeader>
-      <SidebarContent className="flex flex-col gap-6 p-3">
+    <div
+      className={cn(
+        "fixed top-16 bottom-0 flex flex-col transition-all duration-300 ease-in-out border-r border-[#97CBDC]/30 bg-[#004581] text-white z-40",
+        collapsed ? "w-[70px]" : "w-[280px]"
+      )}
+    >
+      {/* Toggle button when collapsed */}
+      {collapsed && (
+        <button
+          onClick={() => setCollapsed(false)}
+          className="absolute top-4 left-[58px] w-6 h-6 rounded-full flex items-center justify-center z-10 bg-[#018ABD] text-white shadow-md"
+        >
+          <ChevronRight className="h-3 w-3" />
+        </button>
+      )}
+
+      {/* Main content */}
+      <div className="flex-1 overflow-y-auto px-3 py-4">
         {/* VIEW SECTION */}
-        <div>
+        <div className="mb-6">
           <div className="mb-3 flex items-center justify-between px-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-400">View</span>
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#1e2a3b] to-transparent ml-2"></div>
+            <span className="text-xs font-bold uppercase tracking-wider text-[#97CBDC]">
+              View
+            </span>
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#97CBDC]/30 to-transparent ml-2"></div>
           </div>
           <div className="space-y-1">
             {viewItems.map((item) => (
-              <SidebarMenuButton
-                key={item.name}
-                asChild
-                className="w-full rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-gradient-to-r hover:from-[#1e2a3b] hover:to-[#1e2a3b]/50 data-[active=true]:bg-gradient-to-r data-[active=true]:from-[#6366f1]/20 data-[active=true]:to-transparent data-[active=true]:border-l-2 data-[active=true]:border-[#06b6d4]"
+              <a
+                key={item.id}
+                href={item.href}
+                onClick={(e) => handleNavigation(e, item)}
+                className={cn(
+                  "block w-full rounded-lg text-sm font-medium transition-all",
+                  collapsed
+                    ? "flex justify-center py-3 px-2"
+                    : "flex items-center px-3 py-2.5",
+                  activeItem === item.id
+                    ? "bg-gradient-to-r from-[#018ABD]/50 to-transparent border-l-2 border-[#97CBDC]"
+                    : "hover:bg-gradient-to-r hover:from-[#018ABD]/30 hover:to-[#018ABD]/10"
+                )}
               >
-                <a href={item.href} className="flex items-center">
-                  <div className="flex h-5 w-5 items-center justify-center">
-                    <item.icon className="h-5 w-5 text-[#06b6d4]" />
-                  </div>
+                <div className="flex h-5 w-5 items-center justify-center">
+                  <item.icon className="h-5 w-5 text-[#97CBDC]" />
+                </div>
+                {!collapsed && (
                   <span className="ml-3 transition-all">{item.name}</span>
-                </a>
-              </SidebarMenuButton>
+                )}
+              </a>
             ))}
           </div>
         </div>
 
         {/* CREATE SECTION */}
-        <div>
+        <div className="mb-6">
           <div className="mb-3 flex items-center justify-between px-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Create</span>
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#1e2a3b] to-transparent ml-2"></div>
+            <span className="text-xs font-bold uppercase tracking-wider text-[#97CBDC]">
+              Create
+            </span>
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#97CBDC]/30 to-transparent ml-2"></div>
           </div>
           <div className="space-y-1">
-            {createItems.map((item, index) =>
+            {createItems.map((item) =>
               item.icon ? (
-                <SidebarMenuButton
-                  key={item.name}
-                  asChild
-                  className="w-full rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-gradient-to-r hover:from-[#1e2a3b] hover:to-[#1e2a3b]/50 data-[active=true]:bg-gradient-to-r data-[active=true]:from-[#6366f1]/20 data-[active=true]:to-transparent data-[active=true]:border-l-2 data-[active=true]:border-[#06b6d4]"
+                <a
+                  key={item.id}
+                  href={item.href}
+                  onClick={(e) => handleNavigation(e, item)}
+                  className={cn(
+                    "block w-full rounded-lg text-sm font-medium transition-all",
+                    collapsed
+                      ? "flex justify-center py-3 px-2"
+                      : "flex items-center px-3 py-2.5",
+                    activeItem === item.id
+                      ? "bg-gradient-to-r from-[#018ABD]/50 to-transparent border-l-2 border-[#97CBDC]"
+                      : "hover:bg-gradient-to-r hover:from-[#018ABD]/30 hover:to-[#018ABD]/10"
+                  )}
                 >
-                  <a href={item.href} className="flex items-center">
-                    <div className="flex h-5 w-5 items-center justify-center">
-                      <item.icon
-                        className={cn("h-5 w-5", item.name.includes("Meme") ? "text-[#6366f1]" : "text-[#06b6d4]")}
-                      />
-                    </div>
+                  <div className="flex h-5 w-5 items-center justify-center">
+                    <item.icon
+                      className={cn(
+                        "h-5 w-5",
+                        item.name.includes("Meme")
+                          ? "text-[#018ABD]"
+                          : "text-[#97CBDC]"
+                      )}
+                    />
+                  </div>
+                  {!collapsed && (
                     <span className="ml-3 transition-all">{item.name}</span>
-                  </a>
-                </SidebarMenuButton>
+                  )}
+                </a>
               ) : (
-                <SidebarMenuButton
-                  key={item.name}
-                  asChild
-                  className="w-full rounded-lg pl-11 pr-3 py-2 text-sm font-medium text-gray-400 transition-all hover:bg-[#1e2a3b]/50 hover:text-white"
-                >
-                  <a href={item.href} className="flex items-center">
+                !collapsed && (
+                  <a
+                    key={item.id}
+                    href={item.href}
+                    onClick={(e) => handleNavigation(e, item)}
+                    className={cn(
+                      "block w-full rounded-lg pl-11 pr-3 py-2 text-sm font-medium text-[#DDE8F0] transition-all hover:bg-[#018ABD]/30 hover:text-white",
+                      activeItem === item.id ? "text-white bg-[#018ABD]/40" : ""
+                    )}
+                  >
                     <span>{item.name}</span>
                   </a>
-                </SidebarMenuButton>
-              ),
+                )
+              )
             )}
           </div>
         </div>
@@ -271,36 +320,86 @@ function AppSidebar() {
         {/* HELP SECTION */}
         <div className="mt-auto">
           <div className="mb-3 flex items-center justify-between px-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Support</span>
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#1e2a3b] to-transparent ml-2"></div>
+            <span className="text-xs font-bold uppercase tracking-wider text-[#97CBDC]">
+              Support
+            </span>
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#97CBDC]/30 to-transparent ml-2"></div>
           </div>
           <div className="space-y-1">
             {helpItems.map((item) => (
-              <SidebarMenuButton
-                key={item.name}
-                asChild
-                className="w-full rounded-lg bg-gradient-to-r from-[#6366f1]/10 to-transparent px-3 py-2.5 text-sm font-medium transition-all hover:from-[#6366f1]/20 hover:to-[#06b6d4]/10"
+              <a
+                key={item.id}
+                href={item.href}
+                onClick={(e) => handleNavigation(e, item)}
+                className={cn(
+                  "block w-full rounded-lg bg-gradient-to-r from-[#018ABD]/30 to-transparent transition-all hover:from-[#018ABD]/50 hover:to-[#97CBDC]/20",
+                  collapsed
+                    ? "flex justify-center py-3 px-2"
+                    : "flex items-center px-3 py-2.5",
+                  activeItem === item.id
+                    ? "from-[#018ABD]/60 to-[#97CBDC]/20"
+                    : ""
+                )}
               >
-                <a href={item.href} className="flex items-center">
-                  <div className="flex h-5 w-5 items-center justify-center">
-                    <item.icon className="h-5 w-5 text-[#6366f1]" />
-                  </div>
-                  <span className="ml-3">{item.name}</span>
-                </a>
-              </SidebarMenuButton>
+                <div className="flex h-5 w-5 items-center justify-center">
+                  <item.icon className="h-5 w-5 text-[#018ABD]" />
+                </div>
+                {!collapsed && <span className="ml-3">{item.name}</span>}
+              </a>
             ))}
           </div>
         </div>
-      </SidebarContent>
-      <SidebarFooter className="border-t border-[#1e2a3b] p-4">
+
+        {/* Promotional banner */}
+        {!collapsed && (
+          <div className="mx-2 my-6 p-4 rounded-xl bg-[#018ABD]/30 text-center">
+            <div className="mb-2 flex justify-center">
+              <Sparkles className="h-8 w-8 text-[#97CBDC]" />
+            </div>
+            <p className="text-sm mb-3 text-[#DDE8F0]">
+              Boost your token launch
+            </p>
+            <button className="w-full py-2 px-4 bg-gradient-to-r from-[#018ABD] to-[#97CBDC] text-white rounded-lg text-sm font-medium hover:opacity-90">
+              Buy $DEFI
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="border-t border-[#97CBDC]/30 p-4">
         <div className="flex items-center">
-          <h4 className="text-sm text-[#06b6d4]">
-           Zentra
+          <h4 className="text-sm text-[#97CBDC]">
+            {collapsed ? "Z" : "Zentra"}
           </h4>
         </div>
-      </SidebarFooter>
-      <SidebarRail className="after:bg-[#1e2a3b] hover:after:bg-[#2d3a4b]" />
-    </Sidebar>
-  )
+      </div>
+
+      {/* Toggle button when expanded */}
+      {!collapsed && (
+        <button
+          onClick={() => setCollapsed(true)}
+          className="absolute top-4 right-3 flex h-8 w-8 items-center justify-center rounded-md bg-[#018ABD]/40 text-[#DDE8F0] hover:bg-[#018ABD]/60 hover:text-white transition-colors"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+      )}
+    </div>
+  );
 }
 
+// Updated layout to accommodate fixed sidebar
+export function ZentraLayout({ children }) {
+  const [collapsed, setCollapsed] = useState(false);
+
+  return (
+    <div className="flex min-h-screen flex-col bg-[#142029] w-full">
+      <Header />
+      <div className="flex flex-1">
+        <div className={collapsed ? "w-[70px]" : "w-[280px]"} />
+        <ZentraSidebar />
+        <div className="flex-1 p-6">{children}</div>
+      </div>
+    </div>
+  );
+}
