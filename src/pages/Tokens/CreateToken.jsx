@@ -9,7 +9,8 @@ import TaxSettingsForm from "./components/forms/TaxSettingsForm";
 import AdvancedSettingsForm from "./components/forms/AdvancedSettingsForm";
 import LiquidityRewardsForm from "./components/forms/LiquidityRewardsForm";
 import FairLaunchBanner from "./components/FairLaunchBanner";
-import { useAccount, useDeployContract } from "wagmi";
+import SuccessModal from "./components/SuccessModal";
+import { useAccount, useDeployContract, usePublicClient } from "wagmi";
 import { parseEther } from "viem";
 import {
   BASIC_TOKEN_ABI,
@@ -52,6 +53,7 @@ const toBasisPoints = (percentage) => {
 export default function TokenCreator() {
   const account = useAccount();
   const { deployContract, deployContractAsync } = useDeployContract();
+  const publicClient = usePublicClient();
 
   // State for token type and form data
   const [tokenType, setTokenType] = useState("basic");
@@ -59,6 +61,11 @@ export default function TokenCreator() {
   const [errors, setErrors] = useState({});
   const [isFormValid, setIsFormValid] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
+
+  // Transaction and modal state
+  const [txHash, setTxHash] = useState("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [contractAddress, setContractAddress] = useState("");
 
   // Handle input changes
   const handleInputChange = (e) => {
@@ -70,6 +77,38 @@ export default function TokenCreator() {
   const handleSelectChange = (name, value) => {
     setFormState((prev) => ({ ...prev, [name]: value }));
   };
+
+  // Effect to fetch contract address after transaction is confirmed
+  useEffect(() => {
+    const getContractAddress = async () => {
+      if (!txHash) return;
+
+      try {
+        // Wait for transaction to be mined
+        const receipt = await publicClient.waitForTransactionReceipt({
+          hash: txHash,
+        });
+
+        // Contract address will be in the receipt
+        if (receipt && receipt.contractAddress) {
+          setContractAddress(receipt.contractAddress);
+          setShowSuccessModal(true);
+
+          // Success toast
+          toast.success(`Successfully deployed ${formState.symbol} Token`);
+        }
+      } catch (error) {
+        console.error("Error fetching contract address:", error);
+        toast.error(`Error fetching contract address: ${error.message}`);
+      } finally {
+        setIsDeploying(false);
+      }
+    };
+
+    if (txHash) {
+      getContractAddress();
+    }
+  }, [txHash, publicClient, formState.symbol]);
 
   // Get cost based on token type
   const getCost = () => {
@@ -131,11 +170,11 @@ export default function TokenCreator() {
       const totalSupply = parseEther(formState.supply);
       const serviceFee = parseEther(getCost());
 
-      let result;
+      let hash;
 
       if (tokenType === "basic") {
         // Deploy basic token
-        result = await deployContractAsync({
+        hash = await deployContractAsync({
           abi: BASIC_TOKEN_ABI,
           args: [
             formState.name,
@@ -154,7 +193,7 @@ export default function TokenCreator() {
         const sellTaxBasisPoints = toBasisPoints(formState.sellTax);
 
         // Deploy tax token
-        result = await deployContractAsync({
+        hash = await deployContractAsync({
           abi: TAX_TOKEN_ABI,
           args: [
             formState.name,
@@ -171,11 +210,8 @@ export default function TokenCreator() {
           bytecode: TAX_TOKEN_BYTECODE,
           value: serviceFee,
         });
-
-        
       } else if (tokenType === "advanced") {
         // Prepare advanced token arguments structure
-        // This should match the Arguments struct expected by the contract
         const advancedArgs = {
           name: formState.name,
           symbol: formState.symbol,
@@ -219,24 +255,24 @@ export default function TokenCreator() {
         };
 
         // Deploy advanced token
-        result = await deployContractAsync({
+        hash = await deployContractAsync({
           abi: ADVANCED_TOKEN_ABI,
           args: [advancedArgs],
           bytecode: ADVANCED_TOKEN_BYTECODE,
           value: serviceFee,
         });
       }
-      console.log(result)
 
-      // Update toast on success
+      console.log("Transaction hash:", hash);
+
+      // Store transaction hash to fetch contract address later
+      setTxHash(hash);
+
+      // Update toast to show transaction is processing
       toast.update(loadingToastId, {
-        render: `Successfully deployed ${formState.symbol} Token`,
-        type: "success",
-        isLoading: false,
-        autoClose: 5000,
+        render: `Transaction submitted! Waiting for confirmation...`,
+        type: "info",
       });
-
-      console.log("Contract deployed:", result);
     } catch (error) {
       console.error("Deployment failed:", error);
       toast.update(loadingToastId, {
@@ -245,9 +281,16 @@ export default function TokenCreator() {
         isLoading: false,
         autoClose: 5000,
       });
-    } finally {
       setIsDeploying(false);
     }
+  };
+
+  // Close modal and reset form for new token creation
+  const handleCloseModal = () => {
+    setShowSuccessModal(false);
+    setFormState(initialFormState);
+    setTxHash("");
+    setContractAddress("");
   };
 
   return (
@@ -313,12 +356,19 @@ export default function TokenCreator() {
                 : "bg-[#475B74]/50 text-[#97CBDC] cursor-not-allowed"
             )}
           >
-            {isDeploying ? "DEPLOYING..." : "CREATE TOKEN"}
+            {isDeploying ? "CREATING..." : "CREATE TOKEN"}
           </Button>
         </div>
       </div>
 
       <FairLaunchBanner />
+
+      {/* Success Modal */}
+      <SuccessModal
+        contractAddress={contractAddress}
+        isOpen={showSuccessModal}
+        onClose={handleCloseModal}
+      />
     </div>
   );
 }
