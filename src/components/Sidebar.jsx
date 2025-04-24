@@ -30,18 +30,17 @@ const viewItems = [
 ];
 
 const createItems = [
-  { id: "meme-coin", name: "Meme Coin 🔥", href: "/meme-coin", icon: Coins },
+  { id: "meme-coin", name: "Meme Coin 🔥", href: "/token", icon: Coins },
   { id: "fair-launch", name: "Fair Launch", href: "/fair-launch", icon: Users },
   {
     id: "pump-launch",
     name: "Pump Launch",
-    href: "/pump-launch",
+    href: "/bonding-token-sale",
     icon: BarChart3,
   },
   { id: "airdrop", name: "Airdrop", href: "/airdrop", icon: FlagIcon },
   { id: "lock", name: "Lock", href: "/lock", icon: Lock },
 ];
-
 
 const helpItems = [{ id: "help", name: "HELP", href: "#", icon: HelpCircle }];
 
@@ -148,8 +147,7 @@ function Header() {
   );
 }
 
-export function ZentraSidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+export function ZentraSidebar({ collapsed, setCollapsed }) {
   const [activeItem, setActiveItem] = useState("launchpad");
 
   // Check current route and set active item on component mount and when location changes
@@ -216,14 +214,14 @@ export function ZentraSidebar() {
       {collapsed && (
         <button
           onClick={() => setCollapsed(false)}
-          className="absolute top-4 left-[58px] w-6 h-6 rounded-full flex items-center justify-center z-10 bg-[#018ABD] text-white shadow-md"
+          className="absolute top-4 left-[58px] cursor-pointer w-6 h-6 rounded-full flex items-center justify-center z-10 bg-[#018ABD] text-white shadow-md"
         >
           <ChevronRight className="h-3 w-3" />
         </button>
       )}
 
       {/* Main content */}
-      <div className="flex-1 overflow-y-auto px-3 py-4">
+      <div className="flex-1 px-3 py-4">
         {/* VIEW SECTION */}
         <div className="mb-6">
           <div className="mb-3 flex items-center justify-between px-2">
@@ -379,7 +377,7 @@ export function ZentraSidebar() {
       {!collapsed && (
         <button
           onClick={() => setCollapsed(true)}
-          className="absolute top-4 right-3 flex h-8 w-8 items-center justify-center rounded-md bg-[#018ABD]/40 text-[#DDE8F0] hover:bg-[#018ABD]/60 hover:text-white transition-colors"
+          className="absolute top-4 right-3 flex h-8 w-8 items-center cursor-pointer justify-center rounded-md bg-[#018ABD]/40 text-[#DDE8F0] hover:bg-[#018ABD]/60 hover:text-white transition-colors"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
@@ -396,9 +394,9 @@ export function ZentraLayout({ children }) {
     <div className="flex min-h-screen flex-col bg-[#142029] w-full">
       <Header />
       <div className="flex flex-1">
-        <div className={collapsed ? "w-[70px]" : "w-[280px]"} />
-        <ZentraSidebar />
-        <div className="flex-1 p-6">{children}</div>
+        <div className={collapsed ? "w-[50px] sm:w-[80px]" : "w-[280px]"} />
+        <ZentraSidebar collapsed={collapsed} setCollapsed={setCollapsed} />
+        <div className="flex-1 p-8 sm:p-6 w-full">{children}</div>
       </div>
     </div>
   );

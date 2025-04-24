@@ -1,19 +1,21 @@
 import React from "react";
 import RootLayout from "./layouts/Layout";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import Staking from "@/pages/Staking/Staking";
+import CreateToken from "@/pages/Tokens/CreateToken";
+import Bounding from "@/pages/Bounding/Index";
+import Airdrop from "@/pages/Airdrop/Airdrop";
 
 const App = () => {
   return (
-    // <Routes>
-    //   <Route element={<RootLayout />}>
-    //     <Route path="/" element />
-    //     <Route path="/staking" element={<Staking />} />
-    //   </Route>
-    // </Routes>
-
     <RootLayout>
-      <Staking/>
+      <Routes>
+        <Route path="/staking" element={<Staking />} />
+        <Route path="/token" element={<CreateToken />} />
+        <Route path="/bonding-token-sale" element={<Bounding />} />
+        <Route path="/airdrop" element={<Airdrop />} />
+        <Route path="/fair-launch" element={<Airdrop />} />
+      </Routes>
     </RootLayout>
   );
 };

@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import { Search, Plus, TrendingUp, Clock, Wallet, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -318,7 +316,7 @@ function PoolCard({ pool, isHovered }) {
             transition: { duration: 0.2 },
           }}
         >
-          <Button className="w-full bg-gradient-to-r from-[#004581] cursor-pointer to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white rounded-xl h-12 shadow-lg shadow-[#004581]/20 transition-all duration-200 font-medium">
+          <Button className="w-full bg-gradient-to-r from-[rgb(0,69,129)] cursor-pointer to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white rounded-xl h-12 shadow-lg shadow-[#004581]/20 transition-all duration-200 font-medium">
             Join Pool
           </Button>
         </motion.div>
