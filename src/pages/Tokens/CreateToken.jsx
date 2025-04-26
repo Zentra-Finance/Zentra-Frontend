@@ -272,6 +272,8 @@ export default function TokenCreator() {
       toast.update(loadingToastId, {
         render: `Transaction submitted! Waiting for confirmation...`,
         type: "info",
+        isLoading: true,
+        autoClose: false,
       });
     } catch (error) {
       console.error("Deployment failed:", error);
@@ -288,9 +290,10 @@ export default function TokenCreator() {
   // Close modal and reset form for new token creation
   const handleCloseModal = () => {
     setShowSuccessModal(false);
-    setFormState(initialFormState);
-    setTxHash("");
-    setContractAddress("");
+    // Optional: Reset form if you want to allow creating another token
+    // setFormState(initialFormState);
+    // setTxHash("");
+    // setContractAddress("");
   };
 
   return (
@@ -356,7 +359,7 @@ export default function TokenCreator() {
                 : "bg-[#475B74]/50 text-[#97CBDC] cursor-not-allowed"
             )}
           >
-            {isDeploying ? "CREATING..." : "CREATE TOKEN"}
+            {isDeploying ? "DEPLOYING..." : "CREATE TOKEN"}
           </Button>
         </div>
       </div>
@@ -366,6 +369,10 @@ export default function TokenCreator() {
       {/* Success Modal */}
       <SuccessModal
         contractAddress={contractAddress}
+        tokenName={formState.name}
+        tokenSymbol={formState.symbol}
+        tokenDecimals={parseInt(formState.decimals)}
+        txHash={txHash}
         isOpen={showSuccessModal}
         onClose={handleCloseModal}
       />

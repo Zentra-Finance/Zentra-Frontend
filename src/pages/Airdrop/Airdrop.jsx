@@ -1,4 +1,4 @@
-import * as React from "react";
+"use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -19,13 +19,14 @@ import {
 } from "@/components/ui/tooltip";
 import { useReadContract } from "wagmi";
 import { formatUnits } from "viem";
-import TransactionStatus from "@/components/ui/transaction-status";
 import { cn } from "@/lib/utils";
 import AirdropHeader from "./Header";
 import { useAccount } from "wagmi";
 import ConnectWallet from "../../components/ui/ConnectButton";
 import { erc20Abi } from "@/utils/ABI";
 import { toast } from "react-toastify";
+import { useTokenAirdrop } from "@/hooks/useTokenAirdrop";
+import AirdropSuccessModal from "./Modal";
 
 // Custom hook to handle token information fetching
 function useTokenInfo(tokenAddress, userAddress) {
@@ -157,7 +158,20 @@ function parseAddressList(addressList) {
 
 export default function AirdropPage() {
   const { isConnected, address } = useAccount();
+  const {
+    performTokenAirdrop,
+    isApproving,
+    isDistributing,
+    isProcessing,
+    currentTxHash,
+    txReceipt,
+    distributionStatus,
+    clearDistributionStatus,
+  } = useTokenAirdrop();
+
   const account = useAccount();
+  const chainExplorer =
+    account?.chain?.blockExplorers?.default?.url;
   const [tokenAddress, setTokenAddress] = useState("");
   const [airdropAmount, setAirdropAmount] = useState("");
   const [addressList, setAddressList] = useState("");
@@ -166,6 +180,7 @@ export default function AirdropPage() {
   const [hoveredField, setHoveredField] = useState(null);
   const fileInputRef = useRef(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Debounce token address changes
   const [debouncedTokenAddress, setDebouncedTokenAddress] = useState("");
@@ -198,9 +213,21 @@ export default function AirdropPage() {
     return () => clearTimeout(timer);
   }, [addressList]);
 
+  // Monitor distribution status changes
+  useEffect(() => {
+    if (distributionStatus.status === "pending" && !isModalOpen) {
+      setIsModalOpen(true);
+    } else if (
+      distributionStatus.status === "success" ||
+      distributionStatus.status === "error"
+    ) {
+      setIsModalOpen(true);
+    }
+  }, [distributionStatus, isModalOpen]);
+
   const handleCopyExample = () => {
     const exampleAddresses =
-      "0x0dD157808C204C97dE18b941e76bcAa20cd0E806\n0x429cB52eC6a7Fc28bC88431909Ae469977F6daCF";
+      "0x690C65EB2e2dd321ACe41a9865Aea3fAa98be2A5\n0x429cB52eC6a7Fc28bC88431909Ae469977F6daCF\n0x0dD157808C204C97dE18b941e76bcAa20Cd0E806";
 
     navigator.clipboard.writeText(exampleAddresses);
     setAddressList(exampleAddresses);
@@ -221,6 +248,17 @@ export default function AirdropPage() {
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    if (distributionStatus.status === "success") {
+      // Reset form if distribution was successful
+      setTokenAddress("");
+      setAirdropAmount("");
+      setAddressList("");
+    }
+    clearDistributionStatus();
   };
 
   const handleSubmit = async (e) => {
@@ -245,20 +283,22 @@ export default function AirdropPage() {
 
     setIsSubmitting(true);
     try {
-      // Implement your airdrop logic here
-      console.log("Sending airdrop:", {
+      // Use our token airdrop function
+      const result = await performTokenAirdrop(
         tokenAddress,
+        tokenInfo?.decimal || 18, // Use token decimals from token info
         recipients,
-        amount: airdropAmount,
-      });
+        airdropAmount
+      );
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      toast.success("Airdrop initiated successfully!");
+      if (!result.success) {
+        toast.error(`Airdrop failed: ${result.error}`);
+      }
     } catch (error) {
       console.error("Error sending airdrop:", error);
-      toast.error("Failed to send airdrop");
+      toast.error(
+        `Failed to send airdrop: ${error.message || "Unknown error"}`
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -547,7 +587,7 @@ export default function AirdropPage() {
                 </div>
                 <motion.button
                   type="submit"
-                  disabled={!isConnected || isSubmitting}
+                  disabled={!isConnected || isSubmitting || isProcessing}
                   className={cn(
                     "bg-gradient-to-r cursor-pointer from-[#004581] to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white rounded-xl px-8 py-4 h-auto font-medium transition-all duration-300 w-full md:w-auto shadow-lg shadow-[#004581]/20",
                     "disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
@@ -555,10 +595,14 @@ export default function AirdropPage() {
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
                 >
-                  {isSubmitting ? (
+                  {isSubmitting || isProcessing ? (
                     <>
                       <div className="h-5 w-5 rounded-full border-2 border-t-transparent border-white animate-spin mr-2"></div>
-                      Processing...
+                      {isApproving
+                        ? "Approving..."
+                        : isDistributing
+                        ? "Distributing..."
+                        : "Processing..."}
                     </>
                   ) : !isConnected ? (
                     <ConnectWallet />
@@ -573,6 +617,19 @@ export default function AirdropPage() {
             </div>
           </motion.div>
         </form>
+
+        {/* Success Modal */}
+        <AirdropSuccessModal
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          status={distributionStatus.status}
+          txHash={distributionStatus.txHash}
+          tokenInfo={tokenInfo}
+          recipientCount={addressCount}
+          airdropAmount={airdropAmount}
+          error={distributionStatus.error}
+          chainExplorer={chainExplorer}
+        />
       </div>
     </div>
   );

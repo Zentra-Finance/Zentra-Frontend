@@ -1,14 +1,22 @@
 import { useState, useEffect } from "react";
-import { Check, Copy, ExternalLink, Rocket } from "lucide-react";
+import { Check, Copy, ExternalLink, Rocket, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAccount } from "wagmi";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import { toast } from "react-toastify";
 
-export default function SuccessModal({ contractAddress, isOpen, onClose }) {
+export default function SuccessModal({
+  contractAddress,
+  tokenSymbol,
+  tokenDecimals = 18,
+  isOpen,
+  onClose,
+}) {
   const [isCopied, setIsCopied] = useState(false);
+  const [addingToWallet, setAddingToWallet] = useState(false);
   const account = useAccount();
   const navigate = useNavigate();
 
@@ -36,10 +44,47 @@ export default function SuccessModal({ contractAddress, isOpen, onClose }) {
   };
 
   const createFairlaunch = () => {
-    // Implementation for fairlaunch creation
     navigate("/fair-launch");
     console.log("Creating fairlaunch for", contractAddress);
-    // Additional logic here
+  };
+
+  const addTokenToWallet = async () => {
+    setAddingToWallet(true);
+    try {
+      // Check if ethereum is available (MetaMask or similar)
+      if (account) {
+        const wasAdded = await window.ethereum.request({
+          method: "wallet_watchAsset",
+          params: {
+            type: "ERC20",
+            options: {
+              address: contractAddress,
+              symbol: tokenSymbol || "TOKEN",
+              decimals: tokenDecimals || 18,
+              image: "",
+            },
+          },
+        });
+
+        console.log(wasAdded);
+
+        if (wasAdded) {
+          console.log("Token added to wallet");
+          toast.success(`${tokenSymbol} successfully added to wallet`);
+        } else {
+          console.log("User rejected adding the token");
+          toast.error("User rejected adding the token");
+        }
+      } else {
+        console.log("Ethereum provider not detected");
+        toast.error("Wallet not detected");
+        // Alternative implementation for non-MetaMask wallets could go here
+      }
+    } catch (error) {
+      console.error("Error adding token to wallet:", error);
+    } finally {
+      setAddingToWallet(false);
+    }
   };
 
   return (
@@ -124,16 +169,30 @@ export default function SuccessModal({ contractAddress, isOpen, onClose }) {
 
             {/* Actions */}
             <div className="p-6 space-y-3">
-              <Button
-                onClick={viewOnTestnet}
-                className={cn(
-                  "w-full cursor-pointer bg-gradient-to-r from-[#004581] to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white rounded-xl py-5 font-medium transition-all duration-300 shadow-lg shadow-[#004581]/20 transform hover:scale-105",
-                  "text-sm sm:text-base flex items-center justify-center gap-2"
-                )}
-              >
-                <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span>View on {account?.chain?.name || "Explorer"}</span>
-              </Button>
+              <div className="flex space-x-3">
+                <Button
+                  onClick={viewOnTestnet}
+                  className={cn(
+                    "flex-1 cursor-pointer bg-gradient-to-r from-[#004581] to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white rounded-xl py-4 font-medium transition-all duration-300 shadow-lg shadow-[#004581]/20 transform hover:scale-105",
+                    "text-sm sm:text-base flex items-center justify-center gap-2"
+                  )}
+                >
+                  <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span>View on Explorer</span>
+                </Button>
+
+                <Button
+                  onClick={addTokenToWallet}
+                  disabled={addingToWallet}
+                  className={cn(
+                    "flex-1 cursor-pointer bg-[#6A3FC2] hover:bg-[#5a33a5] text-white rounded-xl py-4 font-medium transition-all duration-300 shadow-lg shadow-[#6A3FC2]/20 transform hover:scale-105",
+                    "text-sm sm:text-base flex items-center justify-center gap-2"
+                  )}
+                >
+                  <Wallet className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span>{addingToWallet ? "Adding..." : "Add to Wallet"}</span>
+                </Button>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Button
