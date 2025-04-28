@@ -23,11 +23,11 @@ import {
   Shield,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { config } from "@/providers/wagmi";
 import { useAccount, useChainId } from "wagmi";
 import { formatUnits } from "viem";
 import { erc20Abi } from "@/utils/ABI";
 import { readContract } from "@wagmi/core";
-import { config } from "@/providers/wagmi";
 import { useTokenLock } from "@/hooks/useTokenLock";
 import { toast } from "react-toastify";
 
