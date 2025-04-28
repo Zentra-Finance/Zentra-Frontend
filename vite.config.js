@@ -9,7 +9,6 @@ export default defineConfig({
     react(),
     tailwindcss(),
     nodePolyfills({
-      // Polyfills for specific Node.js modules
       include: ["buffer", "process", "util", "stream"],
     }),
   ],
