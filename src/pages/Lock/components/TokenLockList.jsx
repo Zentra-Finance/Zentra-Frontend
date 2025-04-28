@@ -22,12 +22,12 @@ import {
   CheckCircle,
   Shield,
 } from "lucide-react";
-import { config } from "@/providers/wagmi";
 import { formatDistanceToNow } from "date-fns";
 import { useAccount, useChainId } from "wagmi";
 import { formatUnits } from "viem";
 import { erc20Abi } from "@/utils/ABI";
 import { readContract } from "@wagmi/core";
+import { config } from "@/providers/wagmi";
 import { useTokenLock } from "@/hooks/useTokenLock";
 import { toast } from "react-toastify";
 
