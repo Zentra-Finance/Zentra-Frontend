@@ -18,7 +18,6 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import ConnectButton from "./ui/ConnectButton";
 import ConnectWallet from "./ui/ConnectButton";
 
 // Navigation items with icons
@@ -39,7 +38,12 @@ const createItems = [
     icon: BarChart3,
   },
   { id: "airdrop", name: "Airdrop", href: "/airdrop", icon: FlagIcon },
-  { id: "lock", name: "Lock", href: "/lock", icon: Lock },
+  {
+    id: "lock",
+    name: "Lock",
+    href: "/lock" || "/token-lock" || "/lp-lock",
+    icon: Lock,
+  },
 ];
 
 const helpItems = [{ id: "help", name: "HELP", href: "#", icon: HelpCircle }];
@@ -155,6 +159,8 @@ export function ZentraSidebar({ collapsed, setCollapsed }) {
     const updateActiveItemFromPath = () => {
       // Get current path
       const path = window.location.pathname;
+
+      console.log(path)
 
       // Find matching item from all navigation items
       const allItems = [...viewItems, ...createItems, ...helpItems];

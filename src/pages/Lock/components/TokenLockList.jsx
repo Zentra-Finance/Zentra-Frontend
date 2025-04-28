@@ -587,26 +587,20 @@ export default function TokenLockList({ type = "token" }) {
   };
 
   // Format number with friendly abbreviations (k, M, G, T, P, E)
-  const abbreviateNumber = (num, decPlaces = 2) => {
-    if (num === 0 || isNaN(num)) return "0";
-    if (num < 1000) return num.toString(); // Don't abbreviate small numbers
+  const abbreviateNumber = (number, decimals = 2) => {
+    if (isNaN(number)) {
+      return NaN;
+    }
 
-    const abbrev = ["", "k", "M", "G", "T", "P", "E"];
-    const magnitude = Math.floor(Math.log10(Math.abs(num)) / 3);
+    const abbreviations = ["", "K", "M", "B", "T"];
+    let index = 0;
 
-    // Make sure we don't exceed our abbreviation array
-    const safeIndex = Math.min(magnitude, abbrev.length - 1);
-    const divisor = Math.pow(10, safeIndex * 3);
+    while (Math.abs(number) >= 1000 && index < abbreviations.length - 1) {
+      number /= 1000;
+      index++;
+    }
 
-    // Calculate the abbreviated value with proper rounding
-    let abbreviated = num / divisor;
-
-    // Round to specified decimal places
-    const factor = Math.pow(10, decPlaces);
-    abbreviated = Math.round(abbreviated * factor) / factor;
-
-    // Return the abbreviated number with the appropriate suffix
-    return abbreviated + abbrev[safeIndex];
+    return `${Number(number.toFixed(decimals)).toLocaleString()}${abbreviations[index]}`;
   };
 
   // Format token amount for display
@@ -614,7 +608,7 @@ export default function TokenLockList({ type = "token" }) {
     if (!lock) return "0";
 
     // If we have a formatted amount, use it
-    if (lock.formattedAmount && !lock.hasError) {
+    if (lock.amount && !lock.hasError) {
       const numericAmount = Number(lock.amount);
       return abbreviateNumber(numericAmount);
     }
@@ -630,7 +624,7 @@ export default function TokenLockList({ type = "token" }) {
       }
 
       // Fallback to displaying the raw amount
-      return abbreviateNumber(Number(lock.amount));
+      return abbreviateNumber(Number(lock.amount).toLocaleString());
     } catch (error) {
       console.error("Error formatting token amount:", error);
       return Number(lock.amount).toString();
@@ -651,7 +645,7 @@ export default function TokenLockList({ type = "token" }) {
       {/* Tabs */}
       <div className="flex justify-center mb-6 space-x-4">
         <motion.button
-          className={`px-6 py-2 rounded-xl transition-all duration-200 ${
+          className={`px-6 py-2 cursor-pointer rounded-xl transition-all duration-200 ${
             activeTab === "all"
               ? "bg-gradient-to-r from-[#004581] to-[#018ABD] text-white shadow-lg shadow-[#004581]/20"
               : "bg-[#0a0a20]/80 border border-[#475B74]/50 text-[#97CBDC]/70 hover:text-[#97CBDC]"
@@ -663,7 +657,7 @@ export default function TokenLockList({ type = "token" }) {
           {type === "lp" ? "All LP Locks" : "All Token Locks"}
         </motion.button>
         <motion.button
-          className={`px-6 py-2 rounded-xl transition-all duration-200 ${
+          className={`px-6 py-2 cursor-pointer rounded-xl transition-all duration-200 ${
             activeTab === "my"
               ? "bg-gradient-to-r from-[#004581] to-[#018ABD] text-white shadow-lg shadow-[#004581]/20"
               : "bg-[#0a0a20]/80 border border-[#475B74]/50 text-[#97CBDC]/70 hover:text-[#97CBDC]"
@@ -695,7 +689,7 @@ export default function TokenLockList({ type = "token" }) {
           {searchTerm && (
             <button
               onClick={() => setSearchTerm("")}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#97CBDC]/50 hover:text-[#97CBDC] transition-colors"
+              className="absolute right-3 cursor-pointer top-1/2 transform -translate-y-1/2 text-[#97CBDC]/50 hover:text-[#97CBDC] transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -706,7 +700,7 @@ export default function TokenLockList({ type = "token" }) {
           <motion.button
             onClick={handleRefresh}
             disabled={refreshing || isLoading}
-            className="flex items-center gap-1 px-3 py-2 bg-[#0a0a20]/80 border border-[#475B74]/50 rounded-xl text-[#97CBDC] hover:bg-[#0a0a20] transition-colors disabled:opacity-50"
+            className="flex items-center cursor-pointer gap-1 px-3 py-2 bg-[#0a0a20]/80 border border-[#475B74]/50 rounded-xl text-[#97CBDC] hover:bg-[#0a0a20] transition-colors disabled:opacity-50"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -718,7 +712,7 @@ export default function TokenLockList({ type = "token" }) {
           <div className="flex rounded-xl overflow-hidden border border-[#475B74]/50">
             <button
               onClick={() => setViewMode("grid")}
-              className={`flex items-center justify-center w-10 ${
+              className={`flex cursor-pointer items-center justify-center w-10 ${
                 viewMode === "grid"
                   ? "bg-[#018ABD]/20 text-[#97CBDC]"
                   : "bg-[#0a0a20]/80 text-[#97CBDC]/70"
@@ -771,7 +765,7 @@ export default function TokenLockList({ type = "token" }) {
             </button>
             <button
               onClick={() => setViewMode("table")}
-              className={`flex items-center justify-center w-10 ${
+              className={`flex cursor-pointer items-center justify-center w-10 ${
                 viewMode === "table"
                   ? "bg-[#018ABD]/20 text-[#97CBDC]"
                   : "bg-[#0a0a20]/80 text-[#97CBDC]/70"
@@ -799,7 +793,7 @@ export default function TokenLockList({ type = "token" }) {
           <div className="relative">
             <motion.button
               onClick={() => setFilterOpen(!filterOpen)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#0a0a20]/80 border border-[#475B74]/50 rounded-xl text-[#97CBDC] hover:bg-[#0a0a20] transition-colors"
+              className="flex cursor-pointer items-center gap-2 px-4 py-2 bg-[#0a0a20]/80 border border-[#475B74]/50 rounded-xl text-[#97CBDC] hover:bg-[#0a0a20] transition-colors"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -864,7 +858,7 @@ export default function TokenLockList({ type = "token" }) {
                         setFilterOpen(false);
                         fetchLocks();
                       }}
-                      className="w-full py-2 bg-gradient-to-r from-[#004581] to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white rounded-lg transition-colors"
+                      className="w-full py-2 bg-gradient-to-r cursor-pointer from-[#004581] to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white rounded-lg transition-colors"
                     >
                       Apply Filters
                     </button>
@@ -892,7 +886,7 @@ export default function TokenLockList({ type = "token" }) {
             </div>
             <button
               onClick={() => setUnlockError(null)}
-              className="ml-auto text-red-400 hover:text-red-500"
+              className="ml-auto cursor-pointer text-red-400 hover:text-red-500"
             >
               <X className="w-4 h-4" />
             </button>
@@ -1041,7 +1035,7 @@ export default function TokenLockList({ type = "token" }) {
                           unlockingId === lock.id ||
                           isProcessing
                         }
-                        className={`w-full py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-medium ${
+                        className={`w-full py-2 cursor-pointer rounded-lg flex items-center justify-center gap-2 text-sm font-medium ${
                           lock.isUnlockable &&
                           unlockingId !== lock.id &&
                           !isProcessing
@@ -1259,7 +1253,7 @@ export default function TokenLockList({ type = "token" }) {
                               unlockingId === lock.id ||
                               isProcessing
                             }
-                            className={`px-3 py-1.5 h-8 text-xs font-medium rounded-xl flex items-center ml-auto ${
+                            className={`px-3 cursor-pointer py-1.5 h-8 text-xs font-medium rounded-xl flex items-center ml-auto ${
                               lock.isUnlockable &&
                               unlockingId !== lock.id &&
                               !isProcessing
@@ -1358,7 +1352,7 @@ export default function TokenLockList({ type = "token" }) {
                 </h2>
                 <button
                   onClick={() => setShowLockDetails(false)}
-                  className="text-white/70 hover:text-white transition-colors"
+                  className="text-white/70 cursor-pointer hover:text-white transition-colors"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -1434,6 +1428,10 @@ export default function TokenLockList({ type = "token" }) {
                 {/* Lock Details */}
                 <div className="space-y-4 mb-6">
                   <div className="grid grid-cols-2 gap-2 p-3 bg-[#0a0a20]/80 border border-[#475B74]/50 rounded-xl">
+                    <div className="text-sm text-[#97CBDC]/70">Lock Title:</div>
+                    <div className="text-sm text-[#97CBDC] text-right truncate">
+                      {selectedLock?.description}
+                    </div>
                     <div className="text-sm text-[#97CBDC]/70">
                       Token Address:
                     </div>
@@ -1582,7 +1580,7 @@ export default function TokenLockList({ type = "token" }) {
                         setShowLockDetails(false);
                       }}
                       disabled={unlockingId === selectedLock.id || isProcessing}
-                      className="flex-1 flex items-center justify-center bg-gradient-to-r from-[#004581] to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white rounded-xl px-4 py-3 transition-all duration-300 font-medium shadow-lg shadow-[#004581]/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 flex cursor-pointer items-center justify-center bg-gradient-to-r from-[#004581] to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white rounded-xl px-4 py-3 transition-all duration-300 font-medium shadow-lg shadow-[#004581]/20 disabled:opacity-50 disabled:cursor-not-allowed"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
@@ -1603,7 +1601,7 @@ export default function TokenLockList({ type = "token" }) {
                   )}
                   <motion.button
                     onClick={() => setShowLockDetails(false)}
-                    className="flex-1 flex items-center justify-center bg-[#0a0a20]/80 border border-[#475B74]/50 hover:bg-[#0a0a20] text-[#97CBDC] hover:text-white rounded-xl px-4 py-3 transition-colors font-medium"
+                    className="flex-1 cursor-pointer flex items-center justify-center bg-[#0a0a20]/80 border border-[#475B74]/50 hover:bg-[#0a0a20] text-[#97CBDC] hover:text-white rounded-xl px-4 py-3 transition-colors font-medium"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >

@@ -1,4 +1,4 @@
-import { ZentraLayout } from "@/components/sidebar";
+import { ZentraLayout } from "../components/sidebar";
 import "react-toastify/dist/ReactToastify.css";
 
 
