@@ -6,13 +6,25 @@ import "@rainbow-me/rainbowkit/styles.css";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { WagmiConfigProvider } from "@/providers/Wagmi.jsx";
 import RootLayout from "./layouts/Layout.jsx";
-import { ToastContainer } from "react-toastify";
+import { Bounce, ToastContainer } from "react-toastify";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
       <WagmiConfigProvider>
-        <ToastContainer />
+        <ToastContainer
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick={false}
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="colored"
+          transition={Bounce}
+        />
         <Routes>
           <Route path="/*" element={<App />} />
         </Routes>

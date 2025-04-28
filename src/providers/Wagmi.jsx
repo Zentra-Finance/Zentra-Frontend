@@ -32,6 +32,12 @@ const pharosDevnet = defineChain({
   blockExplorers: {
     default: { name: "Pharos Explorers", url: "https://pharosscan.xyz" },
   },
+  contracts: {
+    multicall3: {
+      address: "0x3308CC3B0b2fCD4E9994E210A8290649d61360D7",
+      blockCreated: 18602303,
+    },
+  },
 });
 
 export const config = createConfig({
