@@ -1,5 +1,5 @@
 import "react-toastify/dist/ReactToastify.css";
-import { ZentraLayout } from "@/components/sidebar";
+import { ZentraLayout } from "../components/sidebar";
 
 
 export default function RootLayout({ children }) {
