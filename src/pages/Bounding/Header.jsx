@@ -2,8 +2,10 @@
 
 import { Rocket, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
+import { useAccount } from "wagmi";
 
 export default function LaunchHeader() {
+  const account = useAccount();
   return (
     <motion.div
       className="relative overflow-hidden bg-gradient-to-r from-[#1D2538]/90 to-[#1D2538] backdrop-blur-sm border border-[#475B74]/50 rounded-3xl shadow-xl"
@@ -39,10 +41,11 @@ export default function LaunchHeader() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              Create & Launch a token in one transaction for 0.0003 BNB. Fixed
-              supply of 1 billion tokens with 1% to your Dev wallet. Users can
-              trade & withdraw on the bonding curve until the market cap is
-              reached. Auto-listed on a V3 DEX at $69k with LP burned.
+              Create & Launch a token in one transaction for 0.0003{" "}
+              {account?.chain?.nativeCurrency.symbol || "ETH"}. Fixed supply of
+              1 billion tokens with 1% to your Dev wallet. Users can trade &
+              withdraw on the bonding curve until the market cap is reached.
+              Auto-listed on a V3 DEX at $69k with LP burned.
             </motion.p>
 
             {/* <motion.div

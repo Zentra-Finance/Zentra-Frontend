@@ -160,8 +160,6 @@ export function ZentraSidebar({ collapsed, setCollapsed }) {
       // Get current path
       const path = window.location.pathname;
 
-      console.log(path)
-
       // Find matching item from all navigation items
       const allItems = [...viewItems, ...createItems, ...helpItems];
       const matchingItem = allItems.find((item) => item.href === path);

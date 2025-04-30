@@ -1,11 +1,12 @@
-import React from 'react'
+"use client";
 
-const FairLaunch = () => {
+import { LaunchProvider } from "@/providers/FairLaunchProvider";
+import FairLaunchForm from "./components/FairLaunchForm";
+
+export default function FairLaunchPage() {
   return (
-    <div>
-      
-    </div>
-  )
+    <LaunchProvider>
+      <FairLaunchForm />
+    </LaunchProvider>
+  );
 }
-
-export default FairLaunch
