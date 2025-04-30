@@ -1,7 +1,9 @@
 import { CoinsIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 export default function Header() {
+  const navigate = useNavigate();
   return (
     <div className="relative overflow-hidden bg-gradient-to-r from-[#1D2538]/90 to-[#1D2538] rounded-3xl p-6 mb-8 border border-[#475B74]/50 shadow-xl">
       <div className="absolute inset-0 bg-[url('/Pharos-chain.jpg')] opacity-5 bg-cover bg-center"></div>
@@ -23,9 +25,12 @@ export default function Header() {
           </div>
         </div>
 
-        <Button className="animate-bounce bg-gradient-to-r from-[#004581] to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white rounded-xl shadow-lg shadow-[#004581]/20 transition-all duration-300 transform hover:scale-105 px-6 py-6 h-auto font-bold">
+        <button
+          onClick={() => navigate("/bonding-token-sale")}
+          className="animate-bounce cursor-pointer bg-gradient-to-r from-[#004581] to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white rounded-xl shadow-lg shadow-[#004581]/20 transition-all duration-300 transform hover:scale-105 px-6 py-6 h-auto font-bold"
+        >
           CREATE A PUMP SALE HERE
-        </Button>
+        </button>
       </div>
     </div>
   );
