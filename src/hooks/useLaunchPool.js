@@ -7,12 +7,17 @@ import {
   useChainId,
 } from "wagmi";
 import { readContract, waitForTransaction } from "@wagmi/core";
-import { parseUnits, formatUnits } from "viem";
+import { parseUnits, formatUnits, parseEther } from "viem";
 import {
   LAUNCH_ABI,
   PAHROS_LAUNCH_CONTRACT_ADDRESS,
   CELO_LAUNCH_CONTRACT_ADDRESS,
 } from "@/utils/ABI/FairLaunch";
+import {
+  POOL_FACTORY_ABI,
+  PAHROS_POOL_FACTORY_ADDRESS,
+  CELO_POOL_FACTORY_ADDRESS,
+} from "@/utils/ABI/PoolFactory";
 import { erc20Abi } from "@/utils/ABI";
 import { toast } from "react-toastify";
 import { config } from "@/providers/Wagmi";
@@ -24,10 +29,11 @@ export function useLaunchPool() {
   const [isContributing, setIsContributing] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [isCreatingFairSale, setIsCreatingFairSale] = useState(false);
   const [currentTxHash, setCurrentTxHash] = useState(null);
   const [approvalTxHash, setApprovalTxHash] = useState(null);
   const [transactionStatus, setTransactionStatus] = useState({
-    status: null, // 'success', 'error', 'pending', null
+    status: null,
     txHash: null,
     error: null,
     timestamp: null,
@@ -46,7 +52,21 @@ export function useLaunchPool() {
     return null;
   }, [chainId]);
 
+  // Get the correct pool factory address based on the current chain
+  const getPoolFactoryAddress = useCallback(() => {
+    // Pharos chain ID
+    if (chainId === 50002) {
+      return PAHROS_POOL_FACTORY_ADDRESS;
+    }
+    // Celo Alfajores
+    if (chainId === 44787) {
+      return CELO_POOL_FACTORY_ADDRESS;
+    }
+    return null;
+  }, [chainId]);
+
   const launchContractAddress = getLaunchContractAddress();
+  const poolFactoryAddress = getPoolFactoryAddress();
 
   // Contract write hooks
   const { writeContractAsync: approveTokenAsync } = useWriteContract();
@@ -56,6 +76,7 @@ export function useLaunchPool() {
   const { writeContractAsync: finalizeAsync } = useWriteContract();
   const { writeContractAsync: cancelAsync } = useWriteContract();
   const { writeContractAsync: emergencyWithdrawAsync } = useWriteContract();
+  const { writeContractAsync: createFairSaleAsync } = useWriteContract();
 
   // Transaction receipt hooks
   const { data: txReceipt, isLoading: isWaitingForReceipt } =
@@ -166,6 +187,13 @@ export function useLaunchPool() {
         status === "success"
           ? toast.success("Withdrawal successful!")
           : toast.error("Withdrawal failed. Check transaction for details.");
+      } else if (isCreatingFairSale) {
+        setIsCreatingFairSale(false);
+        status === "success"
+          ? toast.success("Fair sale created successfully!")
+          : toast.error(
+              "Fair sale creation failed. Check transaction for details."
+            );
       }
 
       // Refresh all data
@@ -180,14 +208,19 @@ export function useLaunchPool() {
     isContributing,
     isClaiming,
     isWithdrawing,
+    isCreatingFairSale,
     refetchAllData,
   ]);
 
   // Function to check token allowance for ERC20 token contributions
   const checkTokenAllowance = useCallback(
-    async (tokenAddress, amountInWei) => {
+    async (
+      tokenAddress,
+      amountInWei,
+      spenderAddress = launchContractAddress
+    ) => {
       try {
-        if (!launchContractAddress || !address) {
+        if (!spenderAddress || !address) {
           throw new Error("Missing contract address or user address");
         }
 
@@ -196,7 +229,7 @@ export function useLaunchPool() {
           address: tokenAddress,
           abi: erc20Abi,
           functionName: "allowance",
-          args: [address, launchContractAddress],
+          args: [address, spenderAddress],
         });
 
         return {
@@ -213,7 +246,11 @@ export function useLaunchPool() {
 
   // Function to approve token spending with direct transaction waiting
   const approveToken = useCallback(
-    async (tokenAddress, amountInWei) => {
+    async (
+      tokenAddress,
+      amountInWei,
+      spenderAddress = launchContractAddress
+    ) => {
       try {
         setIsApproving(true);
 
@@ -221,7 +258,7 @@ export function useLaunchPool() {
           address: tokenAddress,
           abi: erc20Abi,
           functionName: "approve",
-          args: [launchContractAddress, amountInWei],
+          args: [spenderAddress, amountInWei],
         });
 
         setApprovalTxHash(hash);
@@ -335,6 +372,168 @@ export function useLaunchPool() {
       checkTokenAllowance,
       approveToken,
       contributeAsync,
+    ]
+  );
+
+  // Function to create a fair sale
+  const createFairSale = useCallback(
+    async (params, fee) => {
+      try {
+        if (!poolFactoryAddress) {
+          throw new Error("Unsupported chain or Pool Factory not configured");
+        }
+
+        if (!address) {
+          throw new Error("Wallet not connected");
+        }
+
+        setIsCreatingFairSale(true);
+        setTransactionStatus({
+          status: "pending",
+          txHash: null,
+          error: null,
+          timestamp: Date.now(),
+        });
+
+        // Prepare the parameters for the function according to the contract structure
+        // [0] = token, [1] = router, [2] = governance, [3] = currency
+        const _addrs = [
+          params.tokenAddress,
+          params.routerAddress,
+          address, // governance (current connected wallet)
+          params.currencyAddress ||
+            "0x0000000000000000000000000000000000000000", // Zero address for native token
+        ];
+
+        // [0] = softCap, [1] = totalToken
+        const _capSettings = [
+          parseUnits(params.softCap, 18),
+          parseUnits(params.totalTokens, 18),
+        ];
+
+        // [0] = startTime, [1] = endTime, [2] = liquidityLockDays
+        const _timeSettings = [
+          BigInt(Math.floor(params.startTime.getTime() / 1000)),
+          BigInt(Math.floor(params.endTime.getTime() / 1000)),
+          BigInt(params.liquidityLockDays),
+        ];
+
+        // [0] = audit, [1] = kyc, [2] = routerVersion
+        const _auditKRVTokenId = [
+          BigInt(params.audit),
+          BigInt(params.kyc),
+          BigInt(params.routerVersion),
+        ];
+
+        // [0] = liquidityPercent, [1] = refundType
+        const _liquidityPercent = [
+          BigInt(params.liquidityPercent),
+          BigInt(params.refundType),
+        ];
+
+        const _poolDetails = params.poolDetails || "";
+
+        // Make sure to provide exactly 3 items for _otherInfo as expected by the contract
+        const _otherInfo =
+          Array.isArray(params.otherInfo) && params.otherInfo.length === 3
+            ? params.otherInfo
+            : ["", "", ""];
+
+        // Calculate estimated tokens needed for approval - IMPORTANT CORRECTION
+        // According to the PDF: totalToken + (liquidityPercent * totalToken / 100)
+        const totalTokens = parseUnits(params.totalTokens, 18);
+        const liquidityPercent = BigInt(params.liquidityPercent);
+        const estimatedTokensNeeded =
+          totalTokens + (totalTokens * liquidityPercent) / 100n;
+
+        console.log(
+          "Estimated tokens needed for approval:",
+          estimatedTokensNeeded.toString()
+        );
+        console.log("Parameters for createFairSale:", {
+          _addrs,
+          _capSettings: _capSettings.map((c) => c.toString()),
+          _timeSettings: _timeSettings.map((t) => t.toString()),
+          _auditKRVTokenId: _auditKRVTokenId.map((a) => a.toString()),
+          _liquidityPercent: _liquidityPercent.map((l) => l.toString()),
+          _poolDetails,
+          _otherInfo,
+          fee: fee.toString(),
+        });
+        console.log(`Fee over here: ${fee}`);
+
+        // Check if token approval is needed
+        const { needsApproval } = await checkTokenAllowance(
+          params.tokenAddress,
+          estimatedTokensNeeded, // Use corrected calculation
+          poolFactoryAddress
+        );
+
+        if (needsApproval) {
+          console.log("Approving tokens...");
+          const isApproved = await approveToken(
+            params.tokenAddress,
+            estimatedTokensNeeded,
+            poolFactoryAddress
+          );
+          if (!isApproved) {
+            throw new Error("Token approval failed or was rejected");
+          }
+          console.log("Token approval successful");
+        } else {
+          console.log("Token already approved");
+        }
+
+
+        // Execute create fair sale
+        console.log("Executing createFairSale...");
+        const hash = await createFairSaleAsync({
+          address: poolFactoryAddress,
+          abi: POOL_FACTORY_ABI,
+          functionName: "createFairSale",
+          args: [
+            _addrs,
+            _capSettings,
+            _timeSettings,
+            _auditKRVTokenId,
+            _liquidityPercent,
+            _poolDetails,
+            _otherInfo,
+          ],
+          value: parseEther("0.015"),
+        });
+
+        console.log("Transaction hash:", hash);
+        setCurrentTxHash(hash);
+        setTransactionStatus((prev) => ({
+          ...prev,
+          txHash: hash,
+        }));
+
+        toast.info("Creating fair sale pool...");
+        return hash;
+      } catch (error) {
+        console.error("Error creating fair sale:", error);
+        setTransactionStatus({
+          status: "error",
+          txHash: null,
+          error: error.message || "Unknown error",
+          timestamp: Date.now(),
+        });
+
+        toast.error(
+          `Fair sale creation failed: ${error.message || "Unknown error"}`
+        );
+        setIsCreatingFairSale(false);
+        return null;
+      }
+    },
+    [
+      poolFactoryAddress,
+      address,
+      checkTokenAllowance,
+      approveToken,
+      createFairSaleAsync,
     ]
   );
 
@@ -566,6 +765,70 @@ export function useLaunchPool() {
     [launchContractAddress, emergencyWithdrawAsync]
   );
 
+  // Get fair fees from PoolFactory
+  const getFairFees = useCallback(
+    async (kyc = 0, audit = 0) => {
+      try {
+        if (!poolFactoryAddress) {
+          throw new Error("Unsupported chain or Pool Factory not configured");
+        }
+
+        // Get fairmasterPrice from ABI
+        let totalFees;
+        try {
+          totalFees = await readContract(config, {
+            address: poolFactoryAddress,
+            abi: POOL_FACTORY_ABI,
+            functionName: "fairmasterPrice",
+          });
+        } catch (error) {
+          console.warn("Could not read fairmasterPrice:", error);
+          // Fallback to a default value or estimate
+          totalFees = parseUnits("0.1", 18); // Example fallback value (0.1 ETH)
+        }
+
+        // Add audit price if needed
+        if (audit === 1) {
+          try {
+            const auditPrice = await readContract(config, {
+              address: poolFactoryAddress,
+              abi: POOL_FACTORY_ABI,
+              functionName: "auditPrice",
+            });
+            totalFees += auditPrice;
+          } catch (error) {
+            console.warn("Could not read auditPrice:", error);
+            // Fallback for audit price
+            totalFees += parseUnits("0.05", 18); // Example fallback (0.05 ETH)
+          }
+        }
+
+        // Add KYC price if needed
+        if (kyc === 1) {
+          try {
+            const kycPrice = await readContract(config, {
+              address: poolFactoryAddress,
+              abi: POOL_FACTORY_ABI,
+              functionName: "kycPrice",
+            });
+            totalFees += kycPrice;
+          } catch (error) {
+            console.warn("Could not read kycPrice:", error);
+            // Fallback for KYC price
+            totalFees += parseUnits("0.05", 18); // Example fallback (0.05 ETH)
+          }
+        }
+
+        return totalFees;
+      } catch (error) {
+        console.error("Error getting fair fees:", error);
+        // Return a default value in case of error to prevent app from breaking
+        return parseUnits("0.15", 18); // Example fallback total (0.15 ETH)
+      }
+    },
+    [poolFactoryAddress]
+  );
+
   // Format and return pool data in a more usable format
   const getFormattedPoolData = useCallback(() => {
     if (!poolInfo) return null;
@@ -631,6 +894,8 @@ export function useLaunchPool() {
     finalize,
     cancel,
     emergencyWithdraw,
+    createFairSale,
+    getFairFees,
 
     // Data getters
     poolInfo,
@@ -647,11 +912,13 @@ export function useLaunchPool() {
     isContributing,
     isClaiming,
     isWithdrawing,
+    isCreatingFairSale,
     isProcessing:
       isApproving ||
       isContributing ||
       isClaiming ||
       isWithdrawing ||
+      isCreatingFairSale ||
       isWaitingForReceipt,
     currentTxHash,
     txReceipt,

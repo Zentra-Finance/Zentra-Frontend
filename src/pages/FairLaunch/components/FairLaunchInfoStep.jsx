@@ -1,15 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2, AlertCircle, CheckCircle, Info } from "lucide-react";
 import { toast } from "react-toastify";
 import { useLaunch } from "@/providers/FairLaunchProvider";
+import { useAccount } from "wagmi";
+import { useTokenInfo } from "@/hooks/useTokenInfo";
+import { formatUnits } from "viem";
 
 export default function FairLaunchStepInfo() {
+  const { address } = useAccount();
+  const account = useAccount();
   const { formData, updateFormData } = useLaunch();
-  const [isLoading, setIsLoading] = useState(false);
+  const [debouncedTokenAddress, setDebouncedTokenAddress] = useState("");
   const [error, setError] = useState("");
+  const symbol = account?.chain?.nativeCurrency?.symbol || "ETH";
 
+  // Set up debounced token address for better UX
+  useEffect(() => {
+    // Only update debounced address if it's different to avoid unnecessary re-renders
+    if (formData.tokenAddress !== debouncedTokenAddress) {
+      const timer = setTimeout(() => {
+        setDebouncedTokenAddress(formData.tokenAddress);
+      }, 500); // 500ms delay
+
+      return () => clearTimeout(timer);
+    }
+  }, [formData.tokenAddress, debouncedTokenAddress]);
+
+  // Use the token info hook
+  const { tokenInfo, isLoadingToken, tokenError, fetchTokenInfo } =
+    useTokenInfo(debouncedTokenAddress, address);
+
+  // Update form data when token info changes
+  useEffect(() => {
+    if (tokenInfo && !formData.isTokenLoaded) {
+      const formattedSupply = tokenInfo.totalSupply
+        ? formatUnits(tokenInfo.totalSupply, tokenInfo.decimal).toString()
+        : "0";
+
+      updateFormData({
+        tokenName: tokenInfo.name,
+        tokenSymbol: tokenInfo.symbol,
+        tokenDecimals: tokenInfo.decimal,
+        tokenSupply: formattedSupply,
+        isTokenLoaded: true,
+      });
+
+      toast.success("Token information loaded successfully");
+    }
+  }, [tokenInfo, formData.isTokenLoaded, updateFormData]);
+
+  // Handle token address changes
   const handleTokenAddressChange = (e) => {
     updateFormData({
       tokenAddress: e.target.value,
@@ -18,43 +60,30 @@ export default function FairLaunchStepInfo() {
     setError("");
   };
 
-  const fetchTokenInfo = async () => {
-    if (!formData.tokenAddress || formData.tokenAddress.length < 42) {
+  // Handle token error
+  useEffect(() => {
+    if (tokenError) {
+      setError(tokenError);
+      // Reset token loaded state if there's an error
+      if (formData.isTokenLoaded) {
+        updateFormData({ isTokenLoaded: false });
+      }
+    }
+  }, [tokenError, formData.isTokenLoaded, updateFormData]);
+
+  // Handle fetch token button click
+  const handleFetchToken = () => {
+    if (
+      !formData.tokenAddress ||
+      formData.tokenAddress.length !== 42 ||
+      !formData.tokenAddress.startsWith("0x")
+    ) {
       setError("Please enter a valid token address");
       return;
     }
 
-    setIsLoading(true);
     setError("");
-
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // In a real implementation, you would call your contract here
-      // const tokenContract = new ethers.Contract(formData.tokenAddress, ERC20_ABI, provider)
-      // const name = await tokenContract.name()
-      // const symbol = await tokenContract.symbol()
-      // const decimals = await tokenContract.decimals()
-      // const totalSupply = await tokenContract.totalSupply()
-
-      updateFormData({
-        tokenName: "ZTR Token",
-        tokenSymbol: "ZTR",
-        tokenDecimals: 18,
-        tokenSupply: "1,000,000,000",
-        isTokenLoaded: true,
-      });
-
-      toast.success("Token information loaded successfully");
-    } catch (error) {
-      console.error("Error fetching token info:", error);
-      setError(
-        "Failed to fetch token information. Please check the address and try again."
-      );
-    } finally {
-      setIsLoading(false);
-    }
+    fetchTokenInfo();
   };
 
   return (
@@ -86,11 +115,11 @@ export default function FairLaunchStepInfo() {
               )}
             </div>
             <button
-              onClick={fetchTokenInfo}
-              disabled={isLoading || !formData.tokenAddress}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#004581] to-[#018ABD] text-white hover:from-[#003b6e] hover:to-[#0179a3] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 min-w-[100px] justify-center shadow-lg shadow-[#004581]/20"
+              onClick={handleFetchToken}
+              disabled={isLoadingToken || !formData.tokenAddress}
+              className="px-4 py-2.5 cursor-pointer rounded-xl bg-gradient-to-r from-[#004581] to-[#018ABD] text-white hover:from-[#003b6e] hover:to-[#0179a3] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 min-w-[100px] justify-center shadow-lg shadow-[#004581]/20"
             >
-              {isLoading ? (
+              {isLoadingToken ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span>Loading</span>
@@ -148,7 +177,9 @@ export default function FairLaunchStepInfo() {
             <div className="space-y-1.5">
               <label className="text-sm text-[#97CBDC]/70">Total Supply</label>
               <div className="p-3 bg-[#0a0a20]/80 border border-[#475B74] rounded-xl text-[#97CBDC]">
-                {formData.isTokenLoaded ? formData.tokenSupply : "—"}
+                {formData.isTokenLoaded
+                  ? Number(formData.tokenSupply).toLocaleString()
+                  : "—"}
               </div>
             </div>
           </div>
@@ -168,9 +199,8 @@ export default function FairLaunchStepInfo() {
                 onChange={(e) => updateFormData({ dex: e.target.value })}
                 className="w-full px-3 py-2.5 rounded-xl border border-[#475B74] bg-[#0a0a20]/80 text-[#97CBDC] focus:border-[#018ABD] focus:outline-none transition-all duration-200"
               >
-                <option value="PancakeSwap V2">PancakeSwap V2</option>
-                <option value="Uniswap V3">Uniswap V3</option>
-                <option value="SushiSwap">SushiSwap</option>
+                <option value="Zentra V2">Zentra V2</option>
+                <option value="Zentra V3">Zentra V3</option>
               </select>
             </div>
 
@@ -181,21 +211,17 @@ export default function FairLaunchStepInfo() {
                   <input
                     type="radio"
                     name="currency"
-                    checked={formData.currency === "TBNB"}
-                    onChange={() => updateFormData({ currency: "TBNB" })}
+                    checked={true}
+                    onChange={() =>
+                      updateFormData({
+                        currency: symbol,
+                      })
+                    }
                     className="w-4 h-4 text-[#018ABD] bg-[#0a0a20] border-[#475B74]"
                   />
-                  <span className="text-[#97CBDC]">TBNB</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="currency"
-                    checked={formData.currency === "ETH"}
-                    onChange={() => updateFormData({ currency: "ETH" })}
-                    className="w-4 h-4 text-[#018ABD] bg-[#0a0a20] border-[#475B74]"
-                  />
-                  <span className="text-[#97CBDC]">ETH</span>
+                  <span className="text-[#97CBDC]">
+                    {symbol}
+                  </span>
                 </label>
               </div>
             </div>
@@ -210,7 +236,9 @@ export default function FairLaunchStepInfo() {
                   onChange={() => {}} // Empty handler since this is always checked
                   className="w-4 h-4 text-[#018ABD] bg-[#0a0a20] border-[#475B74]"
                 />
-                <span className="text-[#97CBDC]">0.015 TBNB</span>
+                <span className="text-[#97CBDC]">
+                  {formData.fee} {symbol}
+                </span>
               </div>
             </div>
           </div>
