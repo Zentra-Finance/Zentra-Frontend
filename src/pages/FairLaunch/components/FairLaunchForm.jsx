@@ -108,7 +108,7 @@ export default function FairLaunchForm() {
                           setCurrentStep(index);
                         }
                       }}
-                      className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
+                      className={`w-full cursor-pointer flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
                         isActive
                           ? "bg-[#0a0a20] text-[#97CBDC]"
                           : isCompleted
@@ -182,7 +182,7 @@ export default function FairLaunchForm() {
                   {currentStep > 0 ? (
                     <button
                       onClick={() => setCurrentStep(currentStep - 1)}
-                      className="flex items-center gap-2 px-4 py-2 text-[#97CBDC]/70 hover:text-[#97CBDC] transition-colors"
+                      className="flex cursor-pointer items-center gap-2 px-4 py-2 text-[#97CBDC]/70 hover:text-[#97CBDC] transition-colors"
                     >
                       <ChevronLeft size={16} />
                       <span>Previous Step</span>
@@ -201,7 +201,7 @@ export default function FairLaunchForm() {
                           window.scrollTo(0, 0);
                         }
                       }}
-                      className={`flex items-center gap-2 px-5 py-2 rounded-lg bg-gradient-to-r from-[#004581] to-[#018ABD] text-white hover:from-[#003b6e] hover:to-[#0179a3] transition-colors ${
+                      className={`flex cursor-pointer items-center gap-2 px-5 py-2 rounded-lg bg-gradient-to-r from-[#004581] to-[#018ABD] text-white hover:from-[#003b6e] hover:to-[#0179a3] transition-colors ${
                         currentStep === 0 && !formData.isTokenLoaded
                           ? "opacity-50 cursor-not-allowed"
                           : ""

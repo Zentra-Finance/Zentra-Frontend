@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Loader2,
   AlertCircle,
@@ -12,35 +12,203 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { useLaunch } from "@/providers/FairLaunchProvider";
+import { useLaunchPool } from "@/hooks/useLaunchPool";
+import truncateWalletAddress from "@/lib/truncateWalletAddress";
+import { useAccount } from "wagmi";
+import { waitForTransaction } from "@wagmi/core";
+import { config } from "@/providers/Wagmi";
 
 export default function FairLaunchReviewStep() {
+  const { address } = useAccount();
   const { formData, isSubmitting, setIsSubmitting, setIsSuccess } = useLaunch();
-  const [error, setError] = useState("");
 
+  const { createFairSale, getFairFees, isCreatingFairSale, transactionStatus } =
+    useLaunchPool();
+
+  const [fee, setFee] = useState("0");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch pool creation fee on component mount
+  useEffect(() => {
+    const fetchFees = async () => {
+      try {
+        setIsLoading(true);
+        // Get KYC and audit settings from form data (default to 0 if not set)
+        const kyc = formData.kyc ? 1 : 0;
+        const audit = formData.audit ? 1 : 0;
+
+        const fairFees = await getFairFees(kyc, audit);
+        setFee(fairFees.toString());
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error fetching fees:", error);
+        setError("Failed to fetch creation fees");
+        setIsLoading(false);
+      }
+    };
+
+    fetchFees();
+  }, [getFairFees, formData.kyc, formData.audit]);
+
+  // Handle successful transaction
+  useEffect(() => {
+    if (transactionStatus.status === "success") {
+      setIsSuccess(true);
+      setIsSubmitting(false);
+    } else if (transactionStatus.status === "error") {
+      setError(transactionStatus.error || "Transaction failed");
+      setIsSubmitting(false);
+    }
+  }, [transactionStatus, setIsSuccess, setIsSubmitting]);
+
+  // handleSubmit function in FairLaunchReviewStep.jsx
   const handleSubmit = async () => {
     setIsSubmitting(true);
     setError("");
 
     try {
-      // Simulate API call to create token launch
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Validate required fields
+      if (!formData.tokenAddress) throw new Error("Token address is required");
+      if (!formData.totalSaleAmount)
+        throw new Error("Total sale amount is required");
+      if (!formData.softcap) throw new Error("Softcap is required");
+      if (!formData.startTime) throw new Error("Start time is required");
+      if (!formData.endTime) throw new Error("End time is required");
+      if (!formData.liquidityLockDuration)
+        throw new Error("Liquidity lock duration is required");
+      if (!formData.liquidityPercentage)
+        throw new Error("Liquidity percentage is required");
 
-      // In a real implementation, you would call your contract here
-      // const contract = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer)
-      // const tx = await contract.createLaunch(formData)
-      // await tx.wait()
+      // Parse dates
+      const startTime = new Date(formData.startTime);
+      const endTime = new Date(formData.endTime);
 
-      setIsSuccess(true);
-      toast.success("Launch created successfully!");
+      // Ensure start time is in the future
+      if (startTime <= new Date()) {
+        throw new Error("Start time must be in the future");
+      }
+
+      // Ensure end time is after start time
+      if (endTime <= startTime) {
+        throw new Error("End time must be after start time");
+      }
+
+      // Get router address based on DEX choice
+      const router = getRouterAddress();
+
+      // Prepare parameters according to the contract expectation
+      // Format according to PDF documentation
+      // [0] = token, [1] = router, [2] = governance, [3] = currency
+      const _addrs = [
+        formData.tokenAddress,
+        router,
+        address, // governance (current connected wallet)
+        "0x0000000000000000000000000000000000000000", // Zero address for native token
+      ];
+
+      // [0] = softCap, [1] = totalToken
+      const _capSettings = [
+        formData.softcap.toString(),
+        formData.totalSaleAmount.toString(),
+      ];
+
+      // [0] = startTime, [1] = endTime, [2] = liquidityLockDays
+      const _timeSettings = [
+        Math.floor(startTime.getTime() / 1000).toString(),
+        Math.floor(endTime.getTime() / 1000).toString(),
+        formData.liquidityLockDuration.toString(),
+      ];
+
+      // [0] = audit, [1] = kyc, [2] = routerVersion
+      const _auditKRVTokenId = [
+        formData.audit ? "1" : "0",
+        formData.kyc ? "1" : "0",
+        formData.dex === "Zentra V2" ? "2" : "3",
+      ];
+
+      // [0] = liquidityPercent, [1] = refundType
+      const _liquidityPercent = [
+        formData.liquidityPercentage.toString(),
+        formData.refundType === "Burn" ? "0" : "1",
+      ];
+
+      // Pool details
+      const _poolDetails =
+        formData.description || `${formData.tokenName || "Token"} Fair Launch`;
+
+      // Other info
+      const _otherInfo = [
+        formData.website || "",
+        formData.socials?.telegram || "",
+        formData.socials?.twitter || "",
+      ];
+
+      // Get the fee required for fair launch creation
+      const kyc = formData.kyc ? 1 : 0;
+      const audit = formData.audit ? 1 : 0;
+      const fairFees = await getFairFees(1, 1);
+
+      // Call the createFairSale function with the properly formatted parameters
+      const saleParams = {
+        tokenAddress: formData.tokenAddress,
+        routerAddress: router,
+        governance: address,
+        currencyAddress: "0x0000000000000000000000000000000000000000",
+        softCap: formData.softcap.toString(),
+        totalTokens: formData.totalSaleAmount.toString(),
+        startTime: startTime,
+        endTime: endTime,
+        liquidityLockDays: formData.liquidityLockDuration.toString(),
+        audit: 1, //  formData.audit == 0 ? 0 :
+        kyc: 1, //  formData.kyc == 0 ? 0 :
+        routerVersion: formData.dex === "Zentra V2" ? 2 : 3,
+        liquidityPercent: formData.liquidityPercentage,
+        refundType: formData.refundType === "Burn" ? 1 : 0,
+        poolDetails: _poolDetails,
+        otherInfo: _otherInfo,
+      };
+
+      const txHash = await createFairSale(saleParams, BigInt(fairFees));
+
+      const receipt = waitForTransaction(config,{
+        hash: txHash,
+      });
+
+      console.log(receipt);
+      if (receipt.status === "error") {
+        toast.error("Failed to create fair sale");
+        setIsSubmitting(false);
+      } 
     } catch (error) {
-      console.error("Error submitting launch:", error);
-      setError(
-        "Failed to create launch. Please check your inputs and try again."
-      );
-      toast.error("Failed to create launch. Please try again.");
-    } finally {
+      console.error("Error creating fair sale:", error);
+      setError(error.message || "Failed to create fair sale");
       setIsSubmitting(false);
+    } finally {
+      setIsSubmitting(false)
+      setIsLoading(false)
     }
+  };
+
+  // console.log(`Audit: ${formData.audit}`);
+  // console.log(`Kyc: ${formData.kyc}`);
+  // console.log("Refund type: ",formData.refundType)
+
+  // Helper function to get router address based on DEX selection
+  const getRouterAddress = () => {
+    // Get the router address based on the selected DEX from PDF documentation
+    const routers = {
+      "Zentra V2": "0xe1CB270f0C7C82dA9E819A4cC2bd43861F550C4F",
+      "Zentra V3": "0xD0AAe88AF22dAE89CCF46D9033C2dB6eBf4B87F0", // This is NonfungiblePositionManager for V3
+    };
+
+    return routers[formData.dex] || routers["Zentra V2"];
+  };
+
+  const getPoolDescription = () => {
+    return (
+      formData.description || `${formData.tokenName || "Token"} Fair Launch`
+    );
   };
 
   return (
@@ -76,14 +244,14 @@ export default function FairLaunchReviewStep() {
                 <div className="p-3">
                   <div className="text-xs text-[#97CBDC]/50">Total Supply</div>
                   <div className="font-medium text-[#97CBDC]">
-                    {formData.tokenSupply}
+                    {Number(formData.tokenSupply).toLocaleString()}
                   </div>
                 </div>
               </div>
               <div className="p-3">
                 <div className="text-xs text-[#97CBDC]/50">Token Address</div>
                 <div className="font-medium text-[#97CBDC] text-sm truncate">
-                  {formData.tokenAddress}
+                  {truncateWalletAddress(formData.tokenAddress)}
                 </div>
               </div>
             </div>
@@ -112,7 +280,8 @@ export default function FairLaunchReviewStep() {
                 <div className="p-3">
                   <div className="text-xs text-[#97CBDC]/50">Sale Amount</div>
                   <div className="font-medium text-[#97CBDC]">
-                    {formData.totalSaleAmount} {formData.tokenSymbol}
+                    {Number(formData.totalSaleAmount).toLocaleString()}{" "}
+                    {formData.tokenSymbol}
                   </div>
                 </div>
                 <div className="p-3">
@@ -268,7 +437,7 @@ export default function FairLaunchReviewStep() {
         <button
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#004581] to-[#018ABD] text-white hover:from-[#003b6e] hover:to-[#0179a3] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 min-w-[180px] justify-center shadow-lg shadow-[#004581]/20"
+          className="px-6 cursor-pointer py-3 rounded-xl bg-gradient-to-r from-[#004581] to-[#018ABD] text-white hover:from-[#003b6e] hover:to-[#0179a3] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 min-w-[180px] justify-center shadow-lg shadow-[#004581]/20"
         >
           {isSubmitting ? (
             <>

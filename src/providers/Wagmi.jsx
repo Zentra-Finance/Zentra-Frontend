@@ -101,7 +101,6 @@ export const WagmiConfigProvider = ({ children }) => {
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
           initialChain={pharosDevnet?.id}
-          coolMode
           showRecentTransactions={true}
           modalSize="compact"
           theme={darkTheme({
