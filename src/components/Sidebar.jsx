@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ConnectWallet from "./ui/ConnectButton";
+import { Link } from "react-router-dom";
 
 // Navigation items with icons
 const viewItems = [
@@ -236,9 +237,9 @@ export function ZentraSidebar({ collapsed, setCollapsed }) {
           </div>
           <div className="space-y-1">
             {viewItems.map((item) => (
-              <a
+              <Link
                 key={item.id}
-                href={item.href}
+                to={item.href}
                 onClick={(e) => handleNavigation(e, item)}
                 className={cn(
                   "block w-full rounded-lg text-sm font-medium transition-all",
@@ -256,7 +257,7 @@ export function ZentraSidebar({ collapsed, setCollapsed }) {
                 {!collapsed && (
                   <span className="ml-3 transition-all">{item.name}</span>
                 )}
-              </a>
+              </Link>
             ))}
           </div>
         </div>
@@ -272,9 +273,9 @@ export function ZentraSidebar({ collapsed, setCollapsed }) {
           <div className="space-y-1">
             {createItems.map((item) =>
               item.icon ? (
-                <a
+                <Link
                   key={item.id}
-                  href={item.href}
+                  to={item.href}
                   onClick={(e) => handleNavigation(e, item)}
                   className={cn(
                     "block w-full rounded-lg text-sm font-medium transition-all",
@@ -299,7 +300,7 @@ export function ZentraSidebar({ collapsed, setCollapsed }) {
                   {!collapsed && (
                     <span className="ml-3 transition-all">{item.name}</span>
                   )}
-                </a>
+                </Link>
               ) : (
                 !collapsed && (
                   <a

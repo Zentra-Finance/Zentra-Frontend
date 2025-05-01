@@ -9,8 +9,8 @@ import {
 import { readContract, waitForTransaction } from "@wagmi/core";
 import { parseUnits, formatUnits } from "viem";
 import {
-  BOUNDING_ABI,
-  PAHROS_BOUNDING_CONTRACT_ADDRESS,
+  BONDING_POOL_ABI,
+  PHAROS_BONDING_CONTRACT_ADDRESS,
   CELO_BOUNDING_CONTRACT_ADDRESS,
 } from "@/utils/ABI/Bounding";
 import { erc20Abi } from "@/utils/ABI";
@@ -35,7 +35,7 @@ export function useBondingPool() {
   const getBondingContractAddress = useCallback(() => {
     // Pharos chain ID
     if (chainId === 50002) {
-      return PAHROS_BOUNDING_CONTRACT_ADDRESS;
+      return PHAROS_BONDING_CONTRACT_ADDRESS;
     }
     // Celo Alfajores
     if (chainId === 44787) {
@@ -60,7 +60,7 @@ export function useBondingPool() {
   // Pool info reader
   const { data: poolInfo, refetch: refetchPoolInfo } = useReadContract({
     address: bondingContractAddress,
-    abi: BOUNDING_ABI,
+    abi: BONDING_POOL_ABI,
     functionName: "getPoolInfo",
     enabled: !!bondingContractAddress,
   });
@@ -68,7 +68,7 @@ export function useBondingPool() {
   // Token price reader
   const { data: tokenPrice, refetch: refetchTokenPrice } = useReadContract({
     address: bondingContractAddress,
-    abi: BOUNDING_ABI,
+    abi: BONDING_POOL_ABI,
     functionName: "getTokenPrice",
     enabled: !!bondingContractAddress,
   });
@@ -190,7 +190,7 @@ export function useBondingPool() {
 
         const reserves = await readContract(config, {
           address: bondingContractAddress,
-          abi: BOUNDING_ABI,
+          abi: BONDING_POOL_ABI,
           functionName: "getReserves",
           args: [BigInt(amount), BigInt(swapType)],
         });
@@ -238,7 +238,7 @@ export function useBondingPool() {
         // Prepare transaction parameters
         const params = {
           address: bondingContractAddress,
-          abi: BOUNDING_ABI,
+          abi: BONDING_POOL_ABI,
           functionName: "swap",
           args: [BigInt(amount), BigInt(swapType)],
         };
@@ -305,7 +305,7 @@ export function useBondingPool() {
         // Execute emergency withdrawal
         const hash = await emergencyWithdrawAsync({
           address: bondingContractAddress,
-          abi: BOUNDING_ABI,
+          abi: BONDING_POOL_ABI,
           functionName: "emergencyWithdraw",
           args: [toAddress, BigInt(amount)],
         });
