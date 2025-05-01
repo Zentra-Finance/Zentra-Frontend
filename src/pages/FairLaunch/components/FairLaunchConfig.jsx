@@ -17,7 +17,7 @@ export default function FairLaunchStepConfig() {
                 <button
                   type="button"
                   onClick={() => updateFormData({ launchType: "fair" })}
-                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex-1 py-2 cursor-pointer px-4 rounded-lg text-sm font-medium transition-colors ${
                     formData.launchType === "fair"
                       ? "bg-gradient-to-r from-[#004581] to-[#018ABD] text-white"
                       : "text-[#97CBDC]/70 hover:text-[#97CBDC]"
@@ -28,7 +28,7 @@ export default function FairLaunchStepConfig() {
                 <button
                   type="button"
                   onClick={() => updateFormData({ launchType: "presale" })}
-                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex-1 py-2 px-4 rounded-lg cursor-pointer text-sm font-medium transition-colors ${
                     formData.launchType === "presale"
                       ? "bg-gradient-to-r from-[#004581] to-[#018ABD] text-white"
                       : "text-[#97CBDC]/70 hover:text-[#97CBDC]"
@@ -383,7 +383,8 @@ export default function FairLaunchStepConfig() {
         <div>
           <h3 className="font-medium text-[#97CBDC]">Important</h3>
           <p className="text-sm text-[#97CBDC]/70">
-            You will need {formData.totalSaleAmount || "0"}{" "}
+            You will need{" "}
+            {Number(formData.totalSaleAmount).toLocaleString() || "0"}{" "}
             {formData.tokenSymbol || "tokens"} to create this{" "}
             {formData.launchType === "fair" ? "Fair Launch" : "Presale"}. Make
             sure you have enough tokens in your wallet before proceeding.
