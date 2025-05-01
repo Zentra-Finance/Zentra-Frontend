@@ -1,4 +1,5 @@
 export const PHAROS_BONDING_CONTRACT_ADDRESS =  ""
+export const CELO_BOUNDING_CONTRACT_ADDRESS =  ""
 export const BONDING_POOL_ABI =  [
     { "type": "receive", "stateMutability": "payable" },
     {

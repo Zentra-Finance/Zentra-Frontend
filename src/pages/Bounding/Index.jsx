@@ -14,9 +14,21 @@ import {
 import { cn } from "@/lib/utils";
 import LaunchHeader from "./Header";
 import TransactionStatus from "@/components/ui/transaction-status";
-import { useAccount } from "wagmi";
+import {
+	useAccount,
+	useWaitForTransactionReceipt,
+	useWatchContractEvent,
+} from "wagmi";
 import ConnectWallet from "../../components/ui/ConnectButton";
 import axios from "axios";
+import { useBondingPool } from "@/hooks/useBoundingPool";
+import {
+	POOL_FACTORY_ABI,
+	PAHROS_POOL_FACTORY_ADDRESS,
+	CELO_POOL_FACTORY_ADDRESS,
+} from "@/utils/ABI/PoolFactory";
+import usePoolFactoryContract from "@/hooks/usePoolFactoryContract";
+import { parseEther } from "ethers";
 
 export default function Bounding() {
 	const { isConnected } = useAccount();
@@ -27,30 +39,24 @@ export default function Bounding() {
 		logoImage: null,
 		bannerImage: null,
 		website: "",
-		description: "",
 		addSocials: false,
 		twitter: "",
 		discord: "",
 		telegram: "",
 		youtube: "",
+		description: "",
 	});
-
+	// const [txnHash, setTxnHash] = useState("")
 	const [errors, setErrors] = useState({});
 	const [activeSection, setActiveSection] = useState("basic"); // basic, socials, description
 	const [hoveredField, setHoveredField] = useState(null);
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [error, setError] = useState("");
+
 	const logoInputRef = useRef(null);
 	const bannerInputRef = useRef(null);
-
-	// Contract interaction hooks
-	// const {
-	//   isLoading: isCreatingToken,
-	//   status: tokenStatus,
-	//   error: tokenError,
-	//   execute: createToken,
-	//   data: contractAddress,
-	//   reset: resetTokenStatus,
-	// } = useCreateToken();
-	// ########################################################################
+	const { createBondingToken } = useBondingPool();
+	const poolFactoryContract = usePoolFactoryContract(true);
 
 	const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 	const [isUploadingBanner, setIsUploadingBanner] = useState(false);
@@ -78,7 +84,7 @@ export default function Bounding() {
 			.then((res) => {
 				setUrl(res.data);
 				setFormState((prev) => ({ ...prev, [name]: res.data }));
-        setErrors((prev) => {
+				setErrors((prev) => {
 					const newErrors = { ...prev };
 					delete newErrors[name];
 					return newErrors;
@@ -124,7 +130,6 @@ export default function Bounding() {
 					uploadSingleImage(name, base64);
 					return;
 				}
-				
 			}
 		} catch (error) {
 			console.log(error);
@@ -173,7 +178,8 @@ export default function Bounding() {
 		if (!formState.name) newErrors.name = "Name is required";
 		if (!formState.symbol) newErrors.symbol = "Symbol is required";
 		if (!formState.logoImage) newErrors.logoImage = "Logo image is required";
-		if (!formState.bannerImage) newErrors.bannerImage = "Banner image is required";
+		if (!formState.bannerImage)
+			newErrors.bannerImage = "Banner image is required";
 		if (!formState.website) {
 			newErrors.website = "Website is required";
 		} else if (!/^https?:\/\/.+/.test(formState.website)) {
@@ -194,6 +200,9 @@ export default function Bounding() {
 	}, [formState]);
 
 	const handleSubmit = async (e) => {
+		setIsSubmitting(true);
+
+		console.log("RUNNING");
 		e.preventDefault();
 
 		if (!isConnected) {
@@ -201,25 +210,87 @@ export default function Bounding() {
 			return;
 		}
 
-		if (validateForm()) {
-			// Prepare data for contract interaction
-			const tokenData = {
-				name: formState.name,
-				symbol: formState.symbol,
-				website: formState.website,
-				description: formState.description,
-				socials: formState.addSocials
-					? {
-							twitter: formState.twitter,
-							discord: formState.discord,
-							telegram: formState.telegram,
-							youtube: formState.youtube,
-					  }
-					: null,
-			};
+		try {
+			if (validateForm()) {
+				// Prepare data for contract interaction
+				const tokenData = {
+					name: formState.name,
+					symbol: formState.symbol,
+					website: formState.website,
+					logo: formState.logoImage,
+					banner: formState.bannerImage,
+					description: formState.description,
+					socials: formState.addSocials
+						? {
+								twitter: formState.twitter,
+								discord: formState.discord,
+								telegram: formState.telegram,
+								youtube: formState.youtube,
+						  }
+						: null,
+				};
+				const tokenInfo = [tokenData.name, tokenData.symbol];
+				const preparedTokendata = [
+					tokenData.logo,
+					tokenData.banner,
+					tokenData.website,
+					tokenData.description,
+					tokenData.socials?.twitter || "",
+					tokenData.socials?.discord || "",
+					tokenData.socials?.telegram || "",
+					tokenData.socials?.youtube || "",
+				];
+				const encodedPoolDetails = preparedTokendata.join("$#$");
+				console.log(encodedPoolDetails);
+				console.log({ poolFactoryContract });
 
-			// Call contract function
-			// await createToken(tokenData);
+				const response = await poolFactoryContract.createBondingToken(
+					account.address,
+					encodedPoolDetails,
+					tokenInfo,
+					{ value: parseEther("0.15"), gasLimit: BigInt(3_000_000) }
+				);
+				const receipt = await response.wait();
+				console.log(receipt);
+
+				// const txHash = await createBondingToken(tokenInfo, encodedPoolDetails);
+
+				// const receipt = waitForTransaction(config, {
+				// 	hash: txHash,
+				// });
+
+				// console.log(txHash);
+				// setTxnHash(txHash)
+				// const {
+				//   isLoading: isCreationPending,
+				//   isSuccess: isCreationConfirmed,
+				//   isError
+				// } = useWaitForTransactionReceipt({
+				//   hash: txHash,
+				// });
+				// const transaction = await publicClient.waitForTransactionReceipt({
+
+				//   hash: txHash,
+				// });
+				// console.log({transaction})
+
+				// if (isError) {
+				// 	toast.error("Failed to create fair sale");
+				// 	setIsSubmitting(false);
+				// }
+				// const decodedArray = encodedPoolDetails.split('$#$');
+				// console.log(decodedArray);
+
+				// Call contract function
+				// await createToken(tokenData);
+			}
+		} catch (error) {
+			console.error("Error creating fair sale:", error);
+			setError(error.message || "Failed to create fair sale");
+			setIsSubmitting(false);
+		} finally {
+			setIsSubmitting(false);
+			// setIsLoading(false);
 		}
 	};
 
@@ -846,6 +917,7 @@ export default function Bounding() {
 													onChange={handleInputChange}
 													placeholder="Eg: The new Degenerate meme coin. Etc.."
 													rows={5}
+													required
 													className="w-full bg-[#0a0a20]/80 border border-[#475B74] rounded-xl placeholder:text-[#97CBDC]/50 focus:border-[#018ABD] transition-all duration-200 p-3 text-white relative z-10"
 												/>
 											</motion.div>
@@ -881,7 +953,7 @@ export default function Bounding() {
 											<div className="flex items-center mb-4 md:mb-0">
 												<span className="text-[#97CBDC]">Total cost:</span>
 												<span className="text-xl font-bold bg-gradient-to-r from-[#018ABD] to-[#97CBDC] bg-clip-text text-transparent ml-2">
-													0.0003 {account.chain.nativeCurrency.symbol}
+													0.15 {account.chain.nativeCurrency.symbol}
 												</span>
 											</div>
 											<Button
@@ -900,7 +972,13 @@ export default function Bounding() {
 													//   CREATING TOKEN...
 													// </>
 													// ) :
-													!isConnected ? <ConnectWallet /> : "CREATE TOKEN"
+													!isConnected ? (
+														<ConnectWallet />
+													) : isSubmitting ? (
+														"Creating token..."
+													) : (
+														"CREATE TOKEN"
+													)
 												}
 											</Button>
 										</div>
