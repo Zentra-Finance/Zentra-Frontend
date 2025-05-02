@@ -19,11 +19,14 @@ import { LaunchListItem } from "./components/LaunchListItem";
 import { LoadingCard } from "./components/LoadingCard";
 import { LoadingListItem } from "./components/LoadingListItem";
 import { EmptyState } from "./components/EmptyState";
+import { PumpSaleCard } from "./components/PumpSaleCard";
+import { PumpSaleListItem } from "./components/PumpSaleListItem";
 import { AnimatePresence, motion } from "framer-motion";
-import { launchData } from "@/lib/launchData";
+import { launchData, pumpSalesData } from "@/lib/launchData";
 import { FilterDropdown } from "./components/FilterDropdown";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "react-router-dom";
+
 
 export default function Index() {
   const [launches, setLaunches] = useState([]);
@@ -34,16 +37,17 @@ export default function Index() {
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [sortOrder, setSortOrder] = useState("newest");
+  const [launchType, setLaunchType] = useState("fairlaunch");
 
   // Simulate loading data from API/contract
   useEffect(() => {
     const timer = setTimeout(() => {
-      setLaunches(launchData);
+      setLaunches(launchType === "fairlaunch" ? launchData : pumpSalesData);
       setIsLoading(false);
     }, 1500);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [launchType]);
 
   // Filter and sort launches
   useEffect(() => {
@@ -81,11 +85,13 @@ export default function Index() {
           return a.progress - b.progress;
         case "raised-high":
           return (
-            parseFloat(b.totalRaised || 0) - parseFloat(a.totalRaised || 0)
+            Number.parseFloat(b.totalRaised || 0) -
+            Number.parseFloat(a.totalRaised || 0)
           );
         case "raised-low":
           return (
-            parseFloat(a.totalRaised || 0) - parseFloat(b.totalRaised || 0)
+            Number.parseFloat(a.totalRaised || 0) -
+            Number.parseFloat(b.totalRaised || 0)
           );
         case "a-z":
           return a.name.localeCompare(b.name);
@@ -107,6 +113,17 @@ export default function Index() {
 
   const handleSortChange = (order) => {
     setSortOrder(order);
+  };
+
+  const handleLaunchTypeChange = (type) => {
+    setLaunchType(type);
+    setIsLoading(true);
+    setActiveFilter("ALL");
+  };
+
+  const handlePoolInfoSubmit = (data) => {
+    console.log("Pool information updated:", data);
+    // Here you would typically send the data to your API
   };
 
   const renderLoadingState = () => {
@@ -174,7 +191,17 @@ export default function Index() {
                     />
                   )}
                 </AnimatePresence>
-                <LaunchCard launch={launch} isHovered={hoveredIndex === idx} />
+                {launchType === "fairlaunch" ? (
+                  <LaunchCard
+                    launch={launch}
+                    isHovered={hoveredIndex === idx}
+                  />
+                ) : (
+                  <PumpSaleCard
+                    launch={launch}
+                    isHovered={hoveredIndex === idx}
+                  />
+                )}
               </motion.div>
             ))}
           </AnimatePresence>
@@ -212,10 +239,17 @@ export default function Index() {
                     />
                   )}
                 </AnimatePresence>
-                <LaunchListItem
-                  launch={launch}
-                  isHovered={hoveredIndex === idx}
-                />
+                {launchType === "fairlaunch" ? (
+                  <LaunchListItem
+                    launch={launch}
+                    isHovered={hoveredIndex === idx}
+                  />
+                ) : (
+                  <PumpSaleListItem
+                    launch={launch}
+                    isHovered={hoveredIndex === idx}
+                  />
+                )}
               </motion.div>
             ))}
           </AnimatePresence>
@@ -225,7 +259,7 @@ export default function Index() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br text-white">
+    <div className="min-h-screen text-white">
       <div className="container mx-auto px-4 py-6 space-y-8">
         {/* Header */}
         <motion.header
@@ -241,27 +275,72 @@ export default function Index() {
                 <Flame className="h-6 w-6 text-[#018ABD]" />
               </div>
             </div>
-            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-[#97CBDC]">
-              Fair Launch
-            </h1>
+            <div className="flex flex-col">
+              <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-[#97CBDC]">
+                {launchType === "fairlaunch" ? "Fair Launch" : "Pump Sales"}
+              </h1>
+              <div className="flex items-center gap-2">
+                <span className="text-[#97CBDC] text-sm">
+                  {launchType === "fairlaunch"
+                    ? "Fair token launches with transparent distribution"
+                    : "High-performance pump sales with maximum returns"}
+                </span>
+              </div>
+            </div>
           </div>
 
           <div className="flex gap-2 w-full md:w-auto">
             <Button className="bg-gradient-to-r from-[#004581] to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white rounded-xl shadow-lg shadow-[#004581]/20 transition-all duration-200 flex-1 md:flex-none">
-              <Link to={"/token"}>CREATE MEME</Link>
+              CREATE MEME
             </Button>
             <Button className="bg-gradient-to-r from-[#004581] to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white rounded-xl shadow-lg shadow-[#004581]/20 transition-all duration-200 flex-1 md:flex-none">
-              <Link to={"/fair-launch"}>LAUNCH IT</Link>
+              LAUNCH IT
             </Button>
+            {/* <EditPoolModal onSubmit={handlePoolInfoSubmit} /> */}
           </div>
         </motion.header>
+
+        {/* Mode Tabs */}
+        <motion.div
+          className="flex justify-center"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <div className="bg-[#1D2538]/80 border border-[#475B74] p-1 rounded-xl inline-flex">
+            <Button
+              variant="ghost"
+              className={cn(
+                "rounded-lg px-4 py-2 h-auto",
+                launchType === "fairlaunch"
+                  ? "bg-gradient-to-r from-[#004581] to-[#018ABD] text-white shadow-lg shadow-[#004581]/20"
+                  : "bg-transparent text-[#97CBDC] hover:text-white hover:bg-[#1D2538]"
+              )}
+              onClick={() => handleLaunchTypeChange("fairlaunch")}
+            >
+              Fair Launch
+            </Button>
+            <Button
+              variant="ghost"
+              className={cn(
+                "rounded-lg px-4 py-2 h-auto",
+                launchType === "pumpsales"
+                  ? "bg-gradient-to-r from-[#004581] to-[#018ABD] text-white shadow-lg shadow-[#004581]/20"
+                  : "bg-transparent text-[#97CBDC] hover:text-white hover:bg-[#1D2538]"
+              )}
+              onClick={() => handleLaunchTypeChange("pumpsales")}
+            >
+              Pump Sales
+            </Button>
+          </div>
+        </motion.div>
 
         {/* Filter Controls */}
         <motion.div
           className="flex flex-col gap-4"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
         >
           <div className="flex flex-col sm:flex-row justify-between gap-4 items-center">
             <div className="relative w-full sm:w-64">
