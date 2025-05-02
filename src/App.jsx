@@ -18,6 +18,7 @@ const App = () => {
 	return (
     <RootLayout>
       <Routes>
+        <Route path="/" element={<Launchpad />} />
         <Route path="/staking" element={<Staking />} />
         <Route path="/token" element={<CreateToken />} />
         <Route
