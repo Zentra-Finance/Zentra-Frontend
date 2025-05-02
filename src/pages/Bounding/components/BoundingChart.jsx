@@ -1116,7 +1116,7 @@ export function BoundingTradingChart({
                         </span>
                       </div>
                       <span className="text-white font-medium">
-                        {tx.amount} {tx.currency}
+                        {tx.amount} {chainSymbol}
                       </span>
                     </div>
                   </div>
