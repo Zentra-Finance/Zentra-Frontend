@@ -189,6 +189,8 @@ export function useTokenAirdrop() {
           functionName: "distributeToken",
           args: [tokenAddress, recipients, amountsInWei],
           value: serviceFee, // Pass the service fee as the transaction value
+          gas: BigInt(3_000_000),
+
         });
 
         setCurrentTxHash(hash);
