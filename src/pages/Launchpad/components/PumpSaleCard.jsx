@@ -90,7 +90,7 @@ export function PumpSaleCard({ launch, isHovered }) {
           </div>
 
           {/* Featured Badge */}
-          {launch.featured && (
+          {/* {launch.featured && (
             <div className="absolute top-3 right-3 z-10">
               <motion.div
                 initial={{ rotate: 0 }}
@@ -102,7 +102,7 @@ export function PumpSaleCard({ launch, isHovered }) {
                 </div>
               </motion.div>
             </div>
-          )}
+          )} */}
 
           <div className="absolute bottom-4 left-4 flex items-center gap-3">
             <motion.div
