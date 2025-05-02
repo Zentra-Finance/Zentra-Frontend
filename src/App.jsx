@@ -33,7 +33,6 @@ const App = () => {
           path="/bonding-details/:boundingAddress"
           element={<BoundingTrading />}
         />
-        <Route path="/bonding-details/:address" element={<Bounding />} />
         <Route path="/airdrop" element={<Airdrop />} />
         <Route path="/fair-launch" element={<FairLaunchPage />} />
         <Route

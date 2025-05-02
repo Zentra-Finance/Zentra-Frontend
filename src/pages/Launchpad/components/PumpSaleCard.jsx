@@ -1,8 +1,9 @@
+"use client";
+
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Diamond,
   Clock,
   TrendingUp,
   Wallet,
@@ -11,15 +12,12 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAccount } from "wagmi";
 import { useNavigate } from "react-router-dom";
 
-export function LaunchCard({ launch, isHovered }) {
-  const account = useAccount();
-  const symbol = account?.chain?.nativeCurrency?.symbol || "ETH";
+export function PumpSaleCard({ launch, isHovered }) {
   const navigate = useNavigate();
   const getStatusColor = () => {
-    switch (launch?.status) {
+    switch (launch.status) {
       case "LIVE":
         return "bg-gradient-to-r from-green-500 to-green-400 text-green-100";
       case "UPCOMING":
@@ -36,7 +34,7 @@ export function LaunchCard({ launch, isHovered }) {
   };
 
   const getProgressBarColor = () => {
-    switch (launch?.status) {
+    switch (launch.status) {
       case "UPCOMING":
         return "bg-gradient-to-r from-blue-600 to-blue-400";
       case "BONDING":
@@ -68,9 +66,9 @@ export function LaunchCard({ launch, isHovered }) {
         <div className="relative h-48 overflow-hidden">
           <img
             src={
-              launch?.backgroundImage || "/placeholder.svg?height=200&width=400"
+              launch.backgroundImage || "/placeholder.svg?height=200&width=400"
             }
-            alt={launch?.name}
+            alt={launch.name}
             fill
             className={cn(
               "object-cover transition-transform duration-700 w-full",
@@ -84,15 +82,15 @@ export function LaunchCard({ launch, isHovered }) {
             <Badge
               className={`${getStatusColor()} text-xs font-medium px-3 py-1 rounded-full shadow-lg`}
             >
-              {launch?.status === "LIVE" && (
+              {launch.status === "LIVE" && (
                 <span className="w-2 h-2 rounded-full bg-white mr-1.5 animate-pulse"></span>
               )}
-              {launch?.status}
+              {launch.status}
             </Badge>
           </div>
 
           {/* Featured Badge */}
-          {/* {launch?.featured && (
+          {launch.featured && (
             <div className="absolute top-3 right-3 z-10">
               <motion.div
                 initial={{ rotate: 0 }}
@@ -104,7 +102,7 @@ export function LaunchCard({ launch, isHovered }) {
                 </div>
               </motion.div>
             </div>
-          )} */}
+          )}
 
           <div className="absolute bottom-4 left-4 flex items-center gap-3">
             <motion.div
@@ -115,8 +113,8 @@ export function LaunchCard({ launch, isHovered }) {
               }}
             >
               <img
-                src={launch?.icon || "/placeholder.svg?height=60&width=60"}
-                alt={`${launch?.name} icon`}
+                src={launch.icon || "/placeholder.svg?height=60&width=60"}
+                alt={`${launch.name} icon`}
                 width={64}
                 height={64}
                 className="object-cover"
@@ -124,12 +122,12 @@ export function LaunchCard({ launch, isHovered }) {
             </motion.div>
             <div>
               <h3 className="text-xl font-bold text-white drop-shadow-md">
-                {launch?.name}
+                {launch.name}
               </h3>
-              {launch?.participants && (
+              {launch.participants && (
                 <div className="flex items-center gap-1 text-xs text-[#97CBDC]">
                   <Users className="h-3 w-3" />
-                  <span>{launch?.participants} participants</span>
+                  <span>{launch.participants} participants</span>
                 </div>
               )}
             </div>
@@ -137,7 +135,8 @@ export function LaunchCard({ launch, isHovered }) {
         </div>
 
         <div className="p-5 space-y-5">
-          <div className="grid grid-cols-2 gap-4">
+          {/* Key metrics section */}
+          <div className="grid grid-cols-3 gap-4">
             <motion.div
               className="bg-[#1D2538]/60 rounded-xl p-3 border border-[#475B74]/50 hover:border-[#018ABD]/50 transition-colors duration-300"
               animate={{
@@ -150,7 +149,7 @@ export function LaunchCard({ launch, isHovered }) {
                 <span className="text-xs text-[#97CBDC]">Progress</span>
               </div>
               <p className="text-lg font-semibold text-[#DDEEFF]">
-                {launch?.progress.toFixed(2)}%
+                {launch.progress.toFixed(2)}%
               </p>
             </motion.div>
 
@@ -163,10 +162,26 @@ export function LaunchCard({ launch, isHovered }) {
             >
               <div className="flex items-center gap-2 mb-1">
                 <TrendingUp className="h-4 w-4 text-[#018ABD]" />
-                <span className="text-xs text-[#97CBDC]">Total Raised</span>
+                <span className="text-xs text-[#97CBDC]">Market Cap</span>
               </div>
               <p className="text-lg font-semibold text-[#DDEEFF]">
-                {launch?.totalRaised || "0"} {symbol}
+                ${launch.marketCap || "0"}
+              </p>
+            </motion.div>
+
+            <motion.div
+              className="bg-[#1D2538]/60 rounded-xl p-3 border border-[#475B74]/50 hover:border-[#018ABD]/50 transition-colors duration-300"
+              animate={{
+                y: isHovered ? -3 : 0,
+                transition: { duration: 0.2, delay: 0.2 },
+              }}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Users className="h-4 w-4 text-[#018ABD]" />
+                <span className="text-xs text-[#97CBDC]">Holders</span>
+              </div>
+              <p className="text-lg font-semibold text-[#DDEEFF]">
+                {launch.holders || "0"}
               </p>
             </motion.div>
           </div>
@@ -175,7 +190,7 @@ export function LaunchCard({ launch, isHovered }) {
             <motion.div
               className={`h-full ${getProgressBarColor()} rounded-full`}
               initial={{ width: 0 }}
-              animate={{ width: `${Math.min(launch?.progress, 100)}%` }}
+              animate={{ width: `${Math.min(launch.progress, 100)}%` }}
               transition={{ duration: 0.8, ease: "easeOut" }}
             ></motion.div>
           </div>
@@ -186,7 +201,7 @@ export function LaunchCard({ launch, isHovered }) {
               <span className="text-sm text-[#97CBDC]">Start Time:</span>
             </div>
             <span className="text-sm font-medium bg-[#1D2538] px-3 py-1 rounded-full text-[#DDEEFF]">
-              {launch?.startTime}
+              {launch.startTime}
             </span>
           </div>
 
@@ -197,9 +212,7 @@ export function LaunchCard({ launch, isHovered }) {
             }}
           >
             <Button className="w-full bg-gradient-to-r from-[#004581] cursor-pointer to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white rounded-xl h-12 shadow-lg shadow-[#004581]/20 transition-all duration-200 font-medium group">
-              <span
-                onClick={() => navigate(`/fairlaunch-details/${launch?.id}`)}
-              >
+              <span onClick={() => navigate(`/bonding-details/${launch?.id}`)}>
                 VIEW SALE
               </span>
               <ArrowUpRight className="h-4 w-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
