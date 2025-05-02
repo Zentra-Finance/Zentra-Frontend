@@ -376,166 +376,155 @@ export function useLaunchPool() {
   );
 
   // Function to create a fair sale
-  const createFairSale = useCallback(
-    async (params, fee) => {
-      try {
-        if (!poolFactoryAddress) {
-          throw new Error("Unsupported chain or Pool Factory not configured");
-        }
+  const createFairSale = async (params, fee) => {
+    try {
+      if (!poolFactoryAddress) {
+        throw new Error("Unsupported chain or Pool Factory not configured");
+      }
 
-        if (!address) {
-          throw new Error("Wallet not connected");
-        }
+      if (!address) {
+        throw new Error("Wallet not connected");
+      }
 
-        setIsCreatingFairSale(true);
-        setTransactionStatus({
-          status: "pending",
-          txHash: null,
-          error: null,
-          timestamp: Date.now(),
-        });
+      setIsCreatingFairSale(true);
+      setTransactionStatus({
+        status: "pending",
+        txHash: null,
+        error: null,
+        timestamp: Date.now(),
+      });
 
-        // Prepare the parameters for the function according to the contract structure
-        // [0] = token, [1] = router, [2] = governance, [3] = currency
-        const _addrs = [
+      // Prepare the parameters for the function according to the contract structure
+      // [0] = token, [1] = router, [2] = governance, [3] = currency
+      const _addrs = [
+        params.tokenAddress,
+        params.routerAddress,
+        address, // governance (current connected wallet)
+        params.currencyAddress || "0x0000000000000000000000000000000000000000", // Zero address for native token
+      ];
+
+      // [0] = softCap, [1] = totalToken
+      const _capSettings = [
+        parseUnits(params.softCap, 18),
+        parseUnits(params.totalTokens, 18),
+      ];
+
+      // [0] = startTime, [1] = endTime, [2] = liquidityLockDays
+      const _timeSettings = [
+        BigInt(Math.floor(params.startTime.getTime() / 1000)),
+        BigInt(Math.floor(params.endTime.getTime() / 1000)),
+        BigInt(params.liquidityLockDays),
+      ];
+
+      // [0] = audit, [1] = kyc, [2] = routerVersion
+      const _auditKRVTokenId = [
+        BigInt(params.audit),
+        BigInt(params.kyc),
+        BigInt(params.routerVersion),
+      ];
+
+      // [0] = liquidityPercent, [1] = refundType (IMPORTANT: PDF says 0 = refund to creator, 1 = burn)
+      const _liquidityPercent = [
+        BigInt(params.liquidityPercent),
+        BigInt(params.refundType),
+      ];
+
+      const _poolDetails = params.poolDetails || "";
+
+      // Make sure to provide exactly 3 items for _otherInfo as expected by the contract
+      const _otherInfo =
+        Array.isArray(params.otherInfo) && params.otherInfo.length === 3
+          ? params.otherInfo
+          : ["", "", params.ownerEmail || ""]; // Include owner email as the third parameter
+
+      // Calculate estimated tokens needed for approval - IMPORTANT CORRECTION
+      // According to the PDF: totalToken + (liquidityPercent * totalToken / 100)
+      const totalTokens = parseUnits(params.totalTokens, 18);
+      const liquidityPercent = BigInt(params.liquidityPercent);
+      const estimatedTokensNeeded =
+        totalTokens + (totalTokens * liquidityPercent) / 100n;
+
+      console.log(
+        "Estimated tokens needed for approval:",
+        estimatedTokensNeeded.toString()
+      );
+      console.log("Parameters for createFairSale:", {
+        _addrs,
+        _capSettings: _capSettings.map((c) => c.toString()),
+        _timeSettings: _timeSettings.map((t) => t.toString()),
+        _auditKRVTokenId: _auditKRVTokenId.map((a) => a.toString()),
+        _liquidityPercent: _liquidityPercent.map((l) => l.toString()),
+        _poolDetails,
+        _otherInfo,
+        fee: parseEther("0.015"),
+      });
+
+      // Check if token approval is needed
+      const { needsApproval } = await checkTokenAllowance(
+        params.tokenAddress,
+        estimatedTokensNeeded,
+        poolFactoryAddress
+      );
+
+      if (needsApproval) {
+        console.log("Approving tokens...");
+        const isApproved = await approveToken(
           params.tokenAddress,
-          params.routerAddress,
-          address, // governance (current connected wallet)
-          params.currencyAddress ||
-            "0x0000000000000000000000000000000000000000", // Zero address for native token
-        ];
-
-        // [0] = softCap, [1] = totalToken
-        const _capSettings = [
-          parseUnits(params.softCap, 18),
-          parseUnits(params.totalTokens, 18),
-        ];
-
-        // [0] = startTime, [1] = endTime, [2] = liquidityLockDays
-        const _timeSettings = [
-          BigInt(Math.floor(params.startTime.getTime() / 1000)),
-          BigInt(Math.floor(params.endTime.getTime() / 1000)),
-          BigInt(params.liquidityLockDays),
-        ];
-
-        // [0] = audit, [1] = kyc, [2] = routerVersion
-        const _auditKRVTokenId = [
-          BigInt(params.audit),
-          BigInt(params.kyc),
-          BigInt(params.routerVersion),
-        ];
-
-        // [0] = liquidityPercent, [1] = refundType
-        const _liquidityPercent = [
-          BigInt(params.liquidityPercent),
-          BigInt(params.refundType),
-        ];
-
-        const _poolDetails = params.poolDetails || "";
-
-        // Make sure to provide exactly 3 items for _otherInfo as expected by the contract
-        const _otherInfo =
-          Array.isArray(params.otherInfo) && params.otherInfo.length === 3
-            ? params.otherInfo
-            : ["", "", ""];
-
-        // Calculate estimated tokens needed for approval - IMPORTANT CORRECTION
-        // According to the PDF: totalToken + (liquidityPercent * totalToken / 100)
-        const totalTokens = parseUnits(params.totalTokens, 18);
-        const liquidityPercent = BigInt(params.liquidityPercent);
-        const estimatedTokensNeeded =
-          totalTokens + (totalTokens * liquidityPercent) / 100n;
-
-        console.log(
-          "Estimated tokens needed for approval:",
-          estimatedTokensNeeded.toString()
-        );
-        console.log("Parameters for createFairSale:", {
-          _addrs,
-          _capSettings: _capSettings.map((c) => c.toString()),
-          _timeSettings: _timeSettings.map((t) => t.toString()),
-          _auditKRVTokenId: _auditKRVTokenId.map((a) => a.toString()),
-          _liquidityPercent: _liquidityPercent.map((l) => l.toString()),
-          _poolDetails,
-          _otherInfo,
-          fee: fee.toString(),
-        });
-        console.log(`Fee over here: ${fee}`);
-
-        // Check if token approval is needed
-        const { needsApproval } = await checkTokenAllowance(
-          params.tokenAddress,
-          estimatedTokensNeeded, // Use corrected calculation
+          estimatedTokensNeeded,
           poolFactoryAddress
         );
-
-        if (needsApproval) {
-          console.log("Approving tokens...");
-          const isApproved = await approveToken(
-            params.tokenAddress,
-            estimatedTokensNeeded,
-            poolFactoryAddress
-          );
-          if (!isApproved) {
-            throw new Error("Token approval failed or was rejected");
-          }
-          console.log("Token approval successful");
-        } else {
-          console.log("Token already approved");
+        if (!isApproved) {
+          throw new Error("Token approval failed or was rejected");
         }
-
-
-        // Execute create fair sale
-        console.log("Executing createFairSale...");
-        const hash = await createFairSaleAsync({
-          address: poolFactoryAddress,
-          abi: POOL_FACTORY_ABI,
-          functionName: "createFairSale",
-          args: [
-            _addrs,
-            _capSettings,
-            _timeSettings,
-            _auditKRVTokenId,
-            _liquidityPercent,
-            _poolDetails,
-            _otherInfo,
-          ],
-          value: parseEther("0.015"),
-        });
-
-        console.log("Transaction hash:", hash);
-        setCurrentTxHash(hash);
-        setTransactionStatus((prev) => ({
-          ...prev,
-          txHash: hash,
-        }));
-
-        toast.info("Creating fair sale pool...");
-        return hash;
-      } catch (error) {
-        console.error("Error creating fair sale:", error);
-        setTransactionStatus({
-          status: "error",
-          txHash: null,
-          error: error.message || "Unknown error",
-          timestamp: Date.now(),
-        });
-
-        toast.error(
-          `Fair sale creation failed: ${error.message || "Unknown error"}`
-        );
-        setIsCreatingFairSale(false);
-        return null;
+        console.log("Token approval successful");
+      } else {
+        console.log("Token already approved");
       }
-    },
-    [
-      poolFactoryAddress,
-      address,
-      checkTokenAllowance,
-      approveToken,
-      createFairSaleAsync,
-    ]
-  );
+
+      // Execute create fair sale - IMPORTANT: Use the fee parameter, not a hardcoded value
+      console.log("Executing createFairSale with fee:", fee.toString());
+      const hash = await createFairSaleAsync({
+        address: poolFactoryAddress,
+        abi: POOL_FACTORY_ABI,
+        functionName: "createFairSale",
+        args: [
+          _addrs,
+          _capSettings,
+          _timeSettings,
+          _auditKRVTokenId,
+          _liquidityPercent,
+          _poolDetails,
+          _otherInfo,
+        ],
+        value: parseEther("0.015"), // Use the calculated fee
+        gas: BigInt(3_000_000),
+      });
+
+      console.log("Transaction hash:", hash);
+      setCurrentTxHash(hash);
+      setTransactionStatus((prev) => ({
+        ...prev,
+        txHash: hash,
+      }));
+
+      toast.info("Creating fair sale pool...");
+      return hash;
+    } catch (error) {
+      console.error("Error creating fair sale:", error);
+      setTransactionStatus({
+        status: "error",
+        txHash: null,
+        error: error.message || "Unknown error",
+        timestamp: Date.now(),
+      });
+
+      toast.error(
+        `Fair sale creation failed: ${error.message || "Unknown error"}`
+      );
+      setIsCreatingFairSale(false);
+      return null;
+    }
+  };
 
   // Function to claim tokens
   const claim = useCallback(async () => {
