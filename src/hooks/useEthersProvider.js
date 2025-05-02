@@ -1,14 +1,17 @@
-import { getEthersSigner } from "@/providers/ethers";
+// import { jsonRpcProvider } from "@/lib/provider";
+import { getEthersProvider, getEthersSigner } from "@/providers/ethers";
 import { config } from "@/providers/Wagmi";
+import { JsonRpcProvider } from "ethers";
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 
 const useEthersProvider = () => {
 	const [signer, setSigner] = useState(null);
+	// const [jsonRpcProvider, setJsonRpcProvider] = useState(null);
     const {address} = useAccount()
 
 	// const provider = getEthersSigner(config);
-	const readOnlyProvider = "https://devnet.dplabs-internal.com";
+	const readOnlyProvider = new JsonRpcProvider(import.meta.env.VITE_SERVER_RPC_URL);
 
     // const [signer, setSigner] = useState(null);
 
@@ -16,6 +19,8 @@ const useEthersProvider = () => {
       async function fetchSigner() {
         try {
           const signer = await getEthersSigner(config); // optionally pass { chainId }
+        //   const provider =  await getEthersProvider(config);
+        //   setJsonRpcProvider(provider);
           setSigner(signer);
         } catch (err) {
           console.error('Failed to get signer:', err);
@@ -25,6 +30,6 @@ const useEthersProvider = () => {
       fetchSigner();
     }, [config, address]);
 
-	return { signer, readOnlyProvider };
+	return { signer, readOnlyProvider: readOnlyProvider };
 };
 export default useEthersProvider;
