@@ -15,17 +15,24 @@ import BoundingTrading from "./pages/Bounding/BoundingTrading";
 import { BondingPoolContextProvider } from "./context/bondingPoolContext";
 
 const App = () => {
-  return (
+	return (
     <RootLayout>
       <Routes>
         <Route path="/staking" element={<Staking />} />
-        <Route path="/" element={<Launchpad />} />
         <Route path="/token" element={<CreateToken />} />
-        <Route path="/bonding-token-sale" element={<Bounding />} />
+        <Route
+          path="/bonding-token-sale"
+          element={
+            <BondingPoolContextProvider>
+              <Bounding />
+            </BondingPoolContextProvider>
+          }
+        />
         <Route
           path="/bonding-details/:boundingAddress"
           element={<BoundingTrading />}
         />
+        <Route path="/bonding-details/:address" element={<Bounding />} />
         <Route path="/airdrop" element={<Airdrop />} />
         <Route path="/fair-launch" element={<FairLaunchPage />} />
         <Route
@@ -38,28 +45,6 @@ const App = () => {
       </Routes>
     </RootLayout>
   );
-	return (
-		<RootLayout>
-			<Routes>
-				<Route path="/staking" element={<Staking />} />
-				<Route path="/token" element={<CreateToken />} />
-				<Route
-					path="/bonding-token-sale"
-					element={
-						<BondingPoolContextProvider>
-							<Bounding />
-						</BondingPoolContextProvider>
-					}
-				/>
-				<Route path="/bonding-details/:address" element={<Bounding />} />
-				<Route path="/airdrop" element={<Airdrop />} />
-				<Route path="/fair-launch" element={<FairLaunchPage />} />
-				<Route path="/lock" element={<TokenLockPage />} />
-				<Route path="/token-lock" element={<TokenLock />} />
-				<Route path="/lp-lock" element={<LPLockListPage />} />
-			</Routes>
-		</RootLayout>
-	);
 };
 
 export default App;
