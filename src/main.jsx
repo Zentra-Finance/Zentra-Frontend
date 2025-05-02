@@ -7,6 +7,8 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { WagmiConfigProvider } from "@/providers/Wagmi.jsx";
 import RootLayout from "./layouts/Layout.jsx";
 import { Bounce, ToastContainer } from "react-toastify";
+import "chartjs-adapter-date-fns";
+
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
