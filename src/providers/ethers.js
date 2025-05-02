@@ -1,5 +1,5 @@
 import { getConnectorClient } from '@wagmi/core';
-import { BrowserProvider, JsonRpcSigner } from 'ethers';
+import { BrowserProvider, FallbackProvider, JsonRpcProvider, JsonRpcSigner } from 'ethers';
 
 /**
  * Converts a viem client into an ethers.js Signer
@@ -21,6 +21,27 @@ function clientToSigner(client) {
   return signer;
 }
 
+export function clientToProvider(client) {
+  const { chain, transport } = client
+  console.log({clientChains: chain})
+  // const chain = chains[0]
+  const network = {
+    chainId: chain?.id,
+    name: chain?.name,
+    ensAddress: chain.contracts?.ensRegistry?.address,
+  }
+
+  if (transport.type === 'fallback') {
+    const providers = transport.transports.map(
+      ({ value }) => new JsonRpcProvider(value?.url, network)
+    )
+    if (providers.length === 1) return providers[0]
+    return new FallbackProvider(providers)
+  }
+
+  return new JsonRpcProvider(transport.url, network)
+}
+
 /**
  * Gets an ethers.js signer from a wagmi viem client
  * @param {object} config - wagmi config
@@ -30,4 +51,11 @@ function clientToSigner(client) {
 export async function getEthersSigner(config, options = {}) {
   const client = await getConnectorClient(config, options);
   return clientToSigner(client);
+}
+
+export async function getEthersProvider(config, options = {}) {
+  if (!config) return undefined
+  const client = await getConnectorClient(config, options);
+
+  return clientToProvider(client)
 }

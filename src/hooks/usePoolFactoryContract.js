@@ -5,8 +5,8 @@ import useEthersProvider from "./useEthersProvider";
 import {
     POOL_FACTORY_ABI,
     PAHROS_POOL_FACTORY_ADDRESS,
-    CELO_POOL_FACTORY_ADDRESS,
 } from "@/utils/ABI/PoolFactory";
+
 const usePoolFactoryContract = (withSigner = false) => {
     const { readOnlyProvider, signer } = useEthersProvider();
 // console.log({signer})
