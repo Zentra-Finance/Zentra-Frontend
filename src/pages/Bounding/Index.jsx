@@ -13,22 +13,12 @@ import {
 // import { useCreateToken } from "@/hooks/use-contract";
 import { cn } from "@/lib/utils";
 import LaunchHeader from "./Header";
-import TransactionStatus from "@/components/ui/transaction-status";
-import {
-	useAccount,
-	useWaitForTransactionReceipt,
-	useWatchContractEvent,
-} from "wagmi";
+import { useAccount } from "wagmi";
 import ConnectWallet from "../../components/ui/ConnectButton";
 import axios from "axios";
-import { useBondingPool } from "@/hooks/useBoundingPool";
-import {
-	POOL_FACTORY_ABI,
-	PAHROS_POOL_FACTORY_ADDRESS,
-	CELO_POOL_FACTORY_ADDRESS,
-} from "@/utils/ABI/PoolFactory";
 import usePoolFactoryContract from "@/hooks/usePoolFactoryContract";
 import { parseEther } from "ethers";
+import { toast } from "react-toastify";
 
 export default function Bounding() {
 	const { isConnected } = useAccount();
@@ -55,13 +45,11 @@ export default function Bounding() {
 
 	const logoInputRef = useRef(null);
 	const bannerInputRef = useRef(null);
-	const { createBondingToken } = useBondingPool();
 	const poolFactoryContract = usePoolFactoryContract(true);
 
 	const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 	const [isUploadingBanner, setIsUploadingBanner] = useState(false);
 	const [url, setUrl] = useState("");
-
 	const convertBase64 = (file) => {
 		return new Promise((resolve, reject) => {
 			const fileReader = new FileReader();
@@ -80,7 +68,7 @@ export default function Bounding() {
 	function uploadSingleImage(name, base64) {
 		name == "logoImage" ? setIsUploadingLogo(true) : setIsUploadingBanner(true);
 		axios
-			.post("https://ipfs-backend.vercel.app/uploadImage", { image: base64 })
+			.post(`${import.meta.env.VITE_SERVER_URL}/uploadImage`, { image: base64 })
 			.then((res) => {
 				setUrl(res.data);
 				setFormState((prev) => ({ ...prev, [name]: res.data }));
@@ -252,45 +240,15 @@ export default function Bounding() {
 				);
 				const receipt = await response.wait();
 				console.log(receipt);
-
-				// const txHash = await createBondingToken(tokenInfo, encodedPoolDetails);
-
-				// const receipt = waitForTransaction(config, {
-				// 	hash: txHash,
-				// });
-
-				// console.log(txHash);
-				// setTxnHash(txHash)
-				// const {
-				//   isLoading: isCreationPending,
-				//   isSuccess: isCreationConfirmed,
-				//   isError
-				// } = useWaitForTransactionReceipt({
-				//   hash: txHash,
-				// });
-				// const transaction = await publicClient.waitForTransactionReceipt({
-
-				//   hash: txHash,
-				// });
-				// console.log({transaction})
-
-				// if (isError) {
-				// 	toast.error("Failed to create fair sale");
-				// 	setIsSubmitting(false);
-				// }
-				// const decodedArray = encodedPoolDetails.split('$#$');
-				// console.log(decodedArray);
-
-				// Call contract function
-				// await createToken(tokenData);
+        toast.success("Bonding token created successfully")
 			}
 		} catch (error) {
-			console.error("Error creating fair sale:", error);
-			setError(error.message || "Failed to create fair sale");
+			console.error("Error creating Bonding sale:", error);
+			setError(error.message || "Failed to create Bonding sale");
+      toast.error("Failed to create Bonding sale")
 			setIsSubmitting(false);
 		} finally {
 			setIsSubmitting(false);
-			// setIsLoading(false);
 		}
 	};
 
