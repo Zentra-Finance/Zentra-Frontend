@@ -89,20 +89,20 @@ export function PumpSaleCard({ launch, isHovered }) {
 						</Badge>
 					</div>
 
-					{/* Featured Badge */}
-					{launch.featured && (
-						<div className="absolute top-3 right-3 z-10">
-							<motion.div
-								initial={{ rotate: 0 }}
-								animate={{ rotate: isHovered ? 360 : 0 }}
-								transition={{ duration: 0.5 }}
-							>
-								<div className="bg-gradient-to-r from-yellow-500 to-amber-300 p-1.5 rounded-full shadow-lg">
-									<Star className="h-4 w-4 text-white fill-white" />
-								</div>
-							</motion.div>
-						</div>
-					)}
+          {/* Featured Badge */}
+          {/* {launch.featured && (
+            <div className="absolute top-3 right-3 z-10">
+              <motion.div
+                initial={{ rotate: 0 }}
+                animate={{ rotate: isHovered ? 360 : 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <div className="bg-gradient-to-r from-yellow-500 to-amber-300 p-1.5 rounded-full shadow-lg">
+                  <Star className="h-4 w-4 text-white fill-white" />
+                </div>
+              </motion.div>
+            </div>
+          )} */}
 
 					<div className="absolute bottom-4 left-4 flex items-center gap-3">
 						<motion.div
