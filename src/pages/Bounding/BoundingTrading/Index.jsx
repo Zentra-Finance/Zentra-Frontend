@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import { BoundingTradingChart } from "../components/BoundingChart";
 import { Button } from "@/components/ui/button";
