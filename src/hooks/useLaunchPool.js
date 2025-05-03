@@ -756,7 +756,7 @@ export function useLaunchPool() {
 
   // Get fair fees from PoolFactory
   const getFairFees = useCallback(
-    async (kyc = 0, audit = 0) => {
+    async (kyc = 2, audit = 2) => {
       try {
         if (!poolFactoryAddress) {
           throw new Error("Unsupported chain or Pool Factory not configured");

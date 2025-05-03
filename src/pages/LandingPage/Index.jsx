@@ -33,6 +33,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import LandingLayout from "./Layout";
 import { ZentraLogoAnimated } from "@/components/ZentraLogoAnimated";
+import ConnectWallet from "@/components/ui/ConnectButton";
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -247,12 +248,7 @@ export default function LandingPage() {
                       Launch App
                       <ArrowRight className="ml-2 h-5 w-5" />
                     </Button>
-                    <Button
-                      variant="outline"
-                      className="border-[#475B74] cursor-pointer text-white hover:bg-[#1D2538]/50 rounded-xl h-12 w-full transition-all duration-200"
-                    >
-                      Connect Wallet
-                    </Button>
+                    <ConnectWallet />
                   </div>
                 </div>
               </motion.div>
