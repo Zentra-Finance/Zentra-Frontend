@@ -4,6 +4,7 @@ import { config } from "@/providers/Wagmi";
 import { JsonRpcProvider } from "ethers";
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
+const readOnlyProvider = new JsonRpcProvider(import.meta.env.VITE_SERVER_RPC_URL);
 
 const useEthersProvider = () => {
 	const [signer, setSigner] = useState(null);
@@ -11,7 +12,6 @@ const useEthersProvider = () => {
     const {address} = useAccount()
 
 	// const provider = getEthersSigner(config);
-	const readOnlyProvider = new JsonRpcProvider(import.meta.env.VITE_SERVER_RPC_URL);
 
     // const [signer, setSigner] = useState(null);
 

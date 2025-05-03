@@ -13,6 +13,8 @@
     "@dicebear/avataaars": "^9.2.2",
     "@dicebear/collection": "^9.2.2",
     "@dicebear/core": "^9.2.2",
+    "@grpc/grpc-js": "^1.13.3",
+    "@grpc/proto-loader": "^0.7.15",
     "@lottiefiles/dotlottie-react": "^0.13.4",
     "@radix-ui/react-checkbox": "^1.1.5",
     "@radix-ui/react-dialog": "^1.1.11",

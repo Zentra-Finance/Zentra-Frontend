@@ -25,7 +25,7 @@ const pharosDevnet = defineChain({
   },
   rpcUrls: {
     default: {
-      http: [import.meta.env.VITE_SERVER_RPC_URL],
+      http: ["https://devnet.dplabs-internal.com"],
       webSocket: ["wss://devnet.dplabs-internal.com"],
     },
   },
