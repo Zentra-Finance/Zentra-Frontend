@@ -20,6 +20,7 @@ import {
   ADVANCED_TOKEN_ABI,
   ADVANCED_TOKEN_BYTECODE,
   ZENTRA_ROUTER_ADDRESS,
+  ZENTRA_V3_ROUTER_ADDRESS,
 } from "@/utils/AdvanceToken";
 import { toast } from "react-toastify";
 
@@ -45,8 +46,9 @@ const initialFormState = {
   sellRewards: "0",
 };
 
-// Helper function to convert percentage to basis points (e.g. 5% -> 50000)
-const toBasisPoints = (percentage) => {
+// Helper function to convert percentage to basis points for the contract (e.g. 5% -> 50000 for tax contract)
+const toContractBasisPoints = (percentage) => {
+  // Convert percentage to a value out of 1,000,000 (100% * 10^6)
   return Math.floor(parseFloat(percentage) * 10000);
 };
 
@@ -90,12 +92,14 @@ export default function TokenCreator() {
         });
 
         // Contract address will be in the receipt
-        if (receipt && receipt.contractAddress) {
+        if (receipt.status === "success" && receipt.contractAddress) {
           setContractAddress(receipt.contractAddress);
           setShowSuccessModal(true);
 
           // Success toast
           toast.success(`Successfully deployed ${formState.symbol} Token`);
+        } else {
+          toast.error("Token creation failed");
         }
       } catch (error) {
         console.error("Error fetching contract address:", error);
@@ -146,12 +150,25 @@ export default function TokenCreator() {
 
   // Get router address based on selected DEX
   const getRouterAddress = () => {
-    // You would replace this with actual router addresses
     switch (formState.dexRouter) {
       case "ZENTRA-v2":
         return ZENTRA_ROUTER_ADDRESS;
+      case "ZENTRA-v3":
+        return ZENTRA_V3_ROUTER_ADDRESS;
       default:
         return ZENTRA_ROUTER_ADDRESS;
+    }
+  };
+
+  // Get DEX type based on selected DEX
+  const getDexType = () => {
+    switch (formState.dexRouter) {
+      case "ZENTRA-v2":
+        return 2; // v2
+      case "ZENTRA-v3":
+        return 3; // v3
+      default:
+        return 2;
     }
   };
 
@@ -162,7 +179,7 @@ export default function TokenCreator() {
     setIsDeploying(true);
 
     // Show loading toast
-    const loadingToastId = toast.loading(`Deploying ${formState.symbol} Token`);
+    toast.info(`Deploying ${formState.symbol} Token`);
 
     try {
       // Common parameters
@@ -176,21 +193,27 @@ export default function TokenCreator() {
         // Deploy basic token
         hash = await deployContractAsync({
           abi: BASIC_TOKEN_ABI,
-          args: [
-            formState.name,
-            formState.symbol,
-            decimals,
-            totalSupply,
-            // formState.serviceFeeReceiver,
-            // serviceFee,
-          ],
+          args: [formState.name, formState.symbol, decimals, totalSupply],
           bytecode: BASIC_TOKEN_BYTECODE,
           value: serviceFee,
         });
       } else if (tokenType === "tax") {
         // Convert tax percentages to basis points (e.g., 5% -> 50000)
-        const buyTaxBasisPoints = toBasisPoints(formState.buyTax);
-        const sellTaxBasisPoints = toBasisPoints(formState.sellTax);
+        // Multiply by 10000 to match contract's expectation of values out of 1000000
+        const buyTaxBasisPoints = toContractBasisPoints(formState.buyTax);
+        const sellTaxBasisPoints = toContractBasisPoints(formState.sellTax);
+
+        console.log("Deploying tax token with params:", {
+          name: formState.name,
+          symbol: formState.symbol,
+          decimals,
+          totalSupply: totalSupply.toString(),
+          buyTax: buyTaxBasisPoints,
+          sellTax: sellTaxBasisPoints,
+          taxReceiver: formState.taxReceiver,
+          router: ZENTRA_ROUTER_ADDRESS,
+          value: serviceFee.toString(),
+        });
 
         // Deploy tax token
         hash = await deployContractAsync({
@@ -203,7 +226,7 @@ export default function TokenCreator() {
             buyTaxBasisPoints,
             sellTaxBasisPoints,
             formState.taxReceiver,
-            getRouterAddress(),
+            ZENTRA_ROUTER_ADDRESS,
             formState.serviceFeeReceiver,
             serviceFee,
           ],
@@ -212,54 +235,56 @@ export default function TokenCreator() {
         });
       } else if (tokenType === "advanced") {
         // Prepare advanced token arguments structure
+        const rewardTokenValue =
+          formState.rewardsToken === "project-token"
+            ? 1 // project token
+            : formState.rewardsToken === "ptt"
+            ? 2 // ptt
+            : 1; // default to project token
+
+        // Create max values properly or set to 0 if not provided
+        const maxTransaction =
+          formState.maxTransaction === "0"
+            ? "0"
+            : parseEther(formState.maxTransaction).toString();
+
+        const maxWallet =
+          formState.maxWallet === "0"
+            ? "0"
+            : parseEther(formState.maxWallet).toString();
+
+        // Prepare the advanced token args object - THIS IS THE KEY CHANGE
         const advancedArgs = {
           name: formState.name,
           symbol: formState.symbol,
           _decimals: decimals,
           _totalSupply: totalSupply,
           _serviceFeeReceiver: formState.serviceFeeReceiver,
-          serviceFee: serviceFee,
           _taxReceiver: formState.taxReceiver,
-
-          // Convert percentages to basis points
-          buyFee: toBasisPoints(formState.buyTax),
-          sellFee: toBasisPoints(formState.sellTax),
-
-          // Handle max transaction/wallet - convert to tokens or percentages as needed
-          maxTransaction:
-            formState.maxTransaction === "0"
-              ? 0
-              : parseEther(formState.maxTransaction),
-          maxWallet:
-            formState.maxWallet === "0" ? 0 : parseEther(formState.maxWallet),
-
-          // Set DEX type based on selection
-          dexType: formState.dexRouter === "ZENTRA-v2" ? 2 : 3,
+          maxTransaction: maxTransaction,
+          maxWallet: maxWallet,
+          buyFee: toContractBasisPoints(formState.buyTax),
+          sellFee: toContractBasisPoints(formState.sellTax),
+          dexType: getDexType(),
           dexRouter: getRouterAddress(),
-
-          // Rewards settings
-          rewardToken:
-            formState.rewardsToken === "project-token"
-              ? "0x0000000000000000000000000000000000000000"
-              : formState.rewardsToken,
-          buyReward: toBasisPoints(formState.buyRewards),
-          sellReward: toBasisPoints(formState.sellRewards),
-
-          // Liquidity settings
-          lpBuyFee: toBasisPoints(formState.liquidityBuyFee),
-          lpSellFee: toBasisPoints(formState.liquiditySellFee),
-
-          // Burn settings
-          buyBurnPercent: toBasisPoints(formState.buyBurnFee),
-          sellBurnPercent: toBasisPoints(formState.sellBurnFee),
+          rewardToken: rewardTokenValue,
+          buyReward: toContractBasisPoints(formState.buyRewards),
+          sellReward: toContractBasisPoints(formState.sellRewards),
+          lpBuyFee: toContractBasisPoints(formState.liquidityBuyFee),
+          lpSellFee: toContractBasisPoints(formState.liquiditySellFee),
+          buyBurnPercent: toContractBasisPoints(formState.buyBurnFee),
+          sellBurnPercent: toContractBasisPoints(formState.sellBurnFee),
+          serviceFee: parseEther(getCost()),
         };
 
-        // Deploy advanced token
+        console.log("Deploying advanced token with params:", advancedArgs);
+
+        // Deploy advanced token - notice how we pass the actual Args struct
         hash = await deployContractAsync({
           abi: ADVANCED_TOKEN_ABI,
           args: [advancedArgs],
           bytecode: ADVANCED_TOKEN_BYTECODE,
-          value: serviceFee,
+          value: parseEther(getCost()),
         });
       }
 
@@ -269,20 +294,10 @@ export default function TokenCreator() {
       setTxHash(hash);
 
       // Update toast to show transaction is processing
-      toast.update(loadingToastId, {
-        render: `Transaction submitted! Waiting for confirmation...`,
-        type: "info",
-        isLoading: true,
-        autoClose: false,
-      });
+      toast.info(`Transaction submitted! Waiting for confirmation...`);
     } catch (error) {
       console.error("Deployment failed:", error);
-      toast.update(loadingToastId, {
-        render: `Failed to deploy: ${error.message}`,
-        type: "error",
-        isLoading: false,
-        autoClose: 5000,
-      });
+      toast.error(`Failed to deploy: ${error.message}`);
       setIsDeploying(false);
     }
   };

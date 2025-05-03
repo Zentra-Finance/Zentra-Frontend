@@ -137,13 +137,9 @@ export function useTokenLock() {
         // Get LP factory addresses for the current chain
         const factories = LP_FACTORY_ADDRESSES[chainId] || [];
 
-        // Prepare multicall for ERC20 checks and getReserves check
-        const calls = [
-          {
-            address: tokenAddress,
-            abi: erc20Abi,
-            functionName: "symbol",
-          },
+        // Step 1: Try to call common LP-specific methods
+        const lpSpecificCalls = [
+          // Try getReserves() - exists on most DEX LP tokens (Uniswap, PancakeSwap, etc.)
           {
             address: tokenAddress,
             abi: [
@@ -163,52 +159,159 @@ export function useTokenLock() {
             ],
             functionName: "getReserves",
           },
+          // Try token0() - another common LP token method
+          {
+            address: tokenAddress,
+            abi: [
+              {
+                inputs: [],
+                name: "token0",
+                outputs: [
+                  { internalType: "address", name: "", type: "address" },
+                ],
+                stateMutability: "view",
+                type: "function",
+              },
+            ],
+            functionName: "token0",
+          },
+          // Try token1() - another common LP token method
+          {
+            address: tokenAddress,
+            abi: [
+              {
+                inputs: [],
+                name: "token1",
+                outputs: [
+                  { internalType: "address", name: "", type: "address" },
+                ],
+                stateMutability: "view",
+                type: "function",
+              },
+            ],
+            functionName: "token1",
+          },
         ];
 
-        // Execute multicall
-        const results = await multicall(config, {
-          contracts: calls,
+        // Execute multicall for LP-specific methods
+        const lpResults = await multicall(config, {
+          contracts: lpSpecificCalls,
           chainId,
         });
 
-        // Check if symbol call succeeded (index 0)
-        const isERC20 = !results[0].error;
+        // Check if any LP-specific method call succeeded
+        const hasLpMethods = lpResults.some((result) => !result.error);
 
-        // Check if getReserves call succeeded (index 1)
-        const hasReserves = !results[1].error;
-
-        if (hasReserves) {
+        if (hasLpMethods) {
+          console.log("Token is identified as LP token via method calls");
           return true;
         }
 
-        if (!isERC20) {
-          return false;
+        // Step 2: Check token symbol and name for LP indicators
+        const tokenDetailCalls = [
+          {
+            address: tokenAddress,
+            abi: erc20Abi,
+            functionName: "symbol",
+          },
+          {
+            address: tokenAddress,
+            abi: erc20Abi,
+            functionName: "name",
+          },
+        ];
+
+        const tokenDetails = await multicall(config, {
+          contracts: tokenDetailCalls,
+          chainId,
+        });
+
+        // Handle potential errors
+        const symbol = tokenDetails[0].error ? "" : tokenDetails[0].result;
+        const name = tokenDetails[1].error ? "" : tokenDetails[1].result;
+
+        // Check if symbol or name contains LP indicators
+        const lpIndicators = [
+          "lp",
+          "pool",
+          "pair",
+          "liquidity",
+          "uniswap",
+          "pancake",
+          "sushi",
+        ];
+
+        const isNameLpRelated = lpIndicators.some(
+          (indicator) =>
+            (typeof symbol === "string" &&
+              symbol.toLowerCase().includes(indicator)) ||
+            (typeof name === "string" && name.toLowerCase().includes(indicator))
+        );
+
+        if (isNameLpRelated) {
+          console.log("Token is identified as LP token via name/symbol");
+          return true;
         }
 
-        // If we need to check factories, prepare factory calls
+        // Step 3: Check if this token is from a known factory (if factories are provided)
         if (factories.length > 0) {
-          const factoryCalls = factories.map((factory) => ({
-            address: factory,
-            abi: FACTORY_ABI,
-            functionName: "allPairsLength",
-          }));
+          try {
+            // Just try to get a few pairs from each factory to see if any pairs exist
+            const factoryCalls = factories.map((factory) => ({
+              address: factory,
+              abi: FACTORY_ABI,
+              functionName: "allPairsLength",
+            }));
 
-          const factoryResults = await multicall(config, {
-            contracts: factoryCalls,
-            chainId,
-          });
+            const factoryResults = await multicall(config, {
+              contracts: factoryCalls,
+              chainId,
+            });
 
-          // Check if any factory has pairs
-          for (const result of factoryResults) {
-            if (!result.error && result.result > 0) {
-              return true;
+            // If any factory has pairs, check if our token is from there
+            for (let i = 0; i < factoryResults.length; i++) {
+              const result = factoryResults[i];
+              if (!result.error && result.result > 0) {
+                const pairsLength = Number(result.result);
+                const factory = factories[i];
+
+                // Only check a few pairs to avoid excessive calls
+                const pairsToCheck = Math.min(5, pairsLength);
+
+                for (let j = 0; j < pairsToCheck; j++) {
+                  try {
+                    const pairResult = await readContract(config, {
+                      address: factory,
+                      abi: FACTORY_ABI,
+                      functionName: "allPairs",
+                      args: [j],
+                    });
+
+                    if (
+                      pairResult.toLowerCase() === tokenAddress.toLowerCase()
+                    ) {
+                      console.log(
+                        "Token is identified as LP token via factory"
+                      );
+                      return true;
+                    }
+                  } catch (e) {
+                    console.error("Error checking factory pair:", e);
+                  }
+                }
+              }
             }
+          } catch (e) {
+            console.error("Error checking factories:", e);
           }
         }
 
+        // Default to treating as not an LP token if we can't confirm it is one
+        console.log("Token is NOT identified as LP token");
         return false;
       } catch (error) {
         console.error("Error determining if LP token:", error);
+        // Safer to assume it's not an LP token if there's an error
         return false;
       }
     },
@@ -915,12 +1018,18 @@ export function useTokenLock() {
         // Since we're handling individual steps with their own toast promises,
         // we don't need another toast.promise here
         const result = await lockProcessPromise();
-
-        return {
+         const receipt = await waitForTransaction(config, {
+            hash: result.hash,
+          });
+        if (receipt.status === "success") {
+          return {
           success: true,
           hash: result.hash,
           isLpToken: result.isLpToken,
         };
+        }
+
+        
       } catch (error) {
         console.error("Error in token lock process:", error);
         setLockStatus({
@@ -1068,8 +1177,7 @@ export function useTokenLock() {
       };
 
       // Use toast.promise for fetching locks
-      const result = await toast.promise(fetchLocksPromise, {
-        pending: "Fetching your token locks...",
+      const result = await fetchLocksPromise({
         success: {
           render({ data }) {
             return `Successfully loaded ${data.total} locks`;
