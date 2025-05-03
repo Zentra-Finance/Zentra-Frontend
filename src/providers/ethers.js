@@ -23,7 +23,7 @@ function clientToSigner(client) {
 
 export function clientToProvider(client) {
   const { chain, transport } = client
-  console.log({clientChains: chain})
+  // console.log({clientChains: chain})
   // const chain = chains[0]
   const network = {
     chainId: chain?.id,
