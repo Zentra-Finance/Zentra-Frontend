@@ -20,10 +20,11 @@ import {
 import { cn } from "@/lib/utils";
 import ConnectWallet from "./ui/ConnectButton";
 import { Link } from "react-router-dom";
+import { ZentraLogo } from "./ZentraLogo";
 
 // Navigation items with icons
 const viewItems = [
-  { id: "launchpad", name: "Launchpad", href: "/", icon: Rocket },
+  { id: "launchpad", name: "Launchpad", href: "/launchpad", icon: Rocket },
   { id: "defi", name: "$DEFI 🔥", href: "/defi", icon: BarChart3 },
   { id: "staking", name: "Staking", href: "/staking", icon: Coins },
   { id: "portfolio", name: "Portfolio", href: "/portfolio", icon: Wallet },
@@ -49,20 +50,6 @@ const createItems = [
 
 const helpItems = [{ id: "help", name: "HELP", href: "#", icon: HelpCircle }];
 
-// ZentraLogo component
-function ZentraLogo() {
-  return (
-    <div className="flex items-center">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#018ABD] to-[#97CBDC]">
-        <Zap className="h-5 w-5 text-white" />
-      </div>
-      <span className="ml-2 text-xl font-bold tracking-tight text-white">
-        Zentra
-      </span>
-    </div>
-  );
-}
-
 // Header component
 function Header() {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
@@ -71,7 +58,7 @@ function Header() {
     <header className="sticky top-0 z-50 border-b border-[#97CBDC]/30 bg-[#004581] bg-opacity-95 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
         <div className="flex justify-between space-x-6">
-          <ZentraLogo />
+          <ZentraLogo showTagline={false} size="xs" />
 
           <nav className="hidden md:block">
             <ul className="flex space-x-1">
