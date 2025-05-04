@@ -1171,7 +1171,7 @@ export default function LandingPage() {
         </section>
 
         {/* Pharos Network Integration Section */}
-        <section className="py-16 md:py-20 px-4 bg-[#0a0f1a]/80">
+        {/* <section className="py-16 md:py-20 px-4 bg-[#0a0f1a]/80">
           <div className="container mx-auto max-w-7xl">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -1247,7 +1247,7 @@ export default function LandingPage() {
                 </div>
               </motion.div>
 
-              {/* <motion.div
+              <motion.div
                 initial={{ opacity: 0, x: -50 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
@@ -1264,10 +1264,10 @@ export default function LandingPage() {
                     className="w-full h-auto"
                   />
                 </div>
-              </motion.div> */}
+              </motion.div>
             </div>
           </div>
-        </section>
+        </section> */}
 
         {/* CTA Section */}
         <section className="py-16 md:py-20 px-4">

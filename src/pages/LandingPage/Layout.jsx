@@ -14,7 +14,7 @@ export default function LandingLayout({ children }) {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <ZentraLogo size="sm" animated={true} />
+              <ZentraLogo size="sm" animated={true} showTagline={false} />
             </div>
 
             <nav className="hidden md:flex items-center gap-6">

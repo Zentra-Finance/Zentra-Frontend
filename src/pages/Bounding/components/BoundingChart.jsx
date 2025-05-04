@@ -21,6 +21,27 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import Chart from "chart.js/auto";
 import { useAccount } from "wagmi";
+import { useBondingContract } from "@/hooks/useBondingContract";
+import { parseUnits } from "viem";
+import { toast } from "react-toastify";
+import axios from "axios";
+import { config } from "@/providers/Wagmi";
+import { getBalance } from "@wagmi/core";
+
+// Helper function to format numbers
+function formatNumber(num) {
+  if (num >= 1000000000000) {
+    return (num / 1000000000000).toFixed(5) + "T";
+  } else if (num >= 1000000000) {
+    return (num / 1000000000).toFixed(5) + "B";
+  } else if (num >= 1000000) {
+    return (num / 1000000).toFixed(2) + "M";
+  } else if (num >= 1000) {
+    return (num / 1000).toFixed(2) + "K";
+  } else {
+    return num.toFixed(2);
+  }
+}
 
 // Default chart options
 const defaultOptions = {
@@ -48,7 +69,7 @@ const defaultOptions = {
           return format(new Date(context[0].parsed.x), "PPp");
         },
         label: (context) => {
-          return `Price: $${context.parsed.y.toFixed(8)}`;
+          return `Price: $${formatCryptoPrice(context.parsed.y)}`;
         },
       },
     },
@@ -84,57 +105,42 @@ const defaultOptions = {
       },
       ticks: {
         color: "rgba(151, 203, 220, 0.7)",
-        callback: (value) => "$" + value.toFixed(8),
+        callback: (value) => "$" + formatCryptoPrice(value),
       },
     },
   },
 };
 
-// Mock data for transactions
-const transactionsData = [
-  {
-    address: "0x690C...e2A5",
-    type: "Buy",
-    amount: "0.0001",
-    currency: "TBNB",
-    percentage: "1.0025%",
-    tag: "DEV",
-  },
-  {
-    address: "0x721F...a3B7",
-    type: "Buy",
-    amount: "0.0005",
-    currency: "TBNB",
-    percentage: "0.8721%",
-  },
-  {
-    address: "0x453D...f9E2",
-    type: "Sell",
-    amount: "0.0002",
-    currency: "TBNB",
-    percentage: "0.3142%",
-  },
-  {
-    address: "0x890A...c1D4",
-    type: "Buy",
-    amount: "0.0008",
-    currency: "TBNB",
-    percentage: "0.2514%",
-  },
-];
+// Helper function to format crypto prices with appropriate precision
+function formatCryptoPrice(price) {
+  if (price === 0) return "0.00";
+
+  // For very small numbers (less than 0.00001), use scientific notation
+  if (price < 0.00001) {
+    return price.toExponential(4);
+  }
+
+  // For other numbers, show 8 decimal places
+  return price.toFixed(8);
+}
 
 export function BoundingTradingChart({
   tokenAddress,
   pairAddress,
   initialData = null,
 }) {
+  console.log("Token Address: ", tokenAddress);
+  console.log("Pair Address: ", pairAddress);
+  console.log("Initial Data: ", initialData);
+
   const account = useAccount();
-  const chainSymbol = account?.chain?.nativeCurrency.symbol || "ETH"
+  const { address } = useAccount();
+  const chainSymbol = account?.chain?.nativeCurrency.symbol || "ETH";
+  const userAddress = account?.address;
   const [chartData, setChartData] = useState(initialData || []);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [timeframe, setTimeframe] = useState("24h");
-  const [chartType, setChartType] = useState("price");
   const [chartInstance, setChartInstance] = useState(null);
   const [priceData, setPriceData] = useState({
     current: 0,
@@ -158,45 +164,105 @@ export function BoundingTradingChart({
     ema: false,
     rsi: false,
   });
+  const [tokenBalance, setTokenBalance] = useState("0");
+  const [holderAddresses, setHolderAddresses] = useState([]);
 
   // Trading state
   const [tradeTab, setTradeTab] = useState("buy");
   const [amount, setAmount] = useState("");
   const [slippage, setSlippage] = useState("0.5");
   const [transactionTab, setTransactionTab] = useState("holders");
+  const { contractInfo, decimals } = useBondingContract(tokenAddress);
+  const [transactionsData, setTransactionsData] = useState([]);
+  const [nativeBalance, setNativeBalance] = useState(null);
 
   const chartRef = useRef(null);
   const chartContainerRef = useRef(null);
 
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (!address) return;
+      try {
+        const balanceData = await getBalance(config, { address });
+        setNativeBalance(balanceData?.formatted); // Or .value if you want raw BigInt
+      } catch (err) {
+        console.error("Failed to fetch balance:", err);
+        setNativeBalance("0");
+      }
+    };
+    fetchBalance();
+  }, [address]);
+
+  console.log("Native: ", nativeBalance);
   // Function to fetch chart data from smart contract or API
   const fetchChartData = async (tf = timeframe) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // This would be replaced with your actual contract call or API fetch
-      // For example:
-      // const web3 = new Web3(window.ethereum);
-      // const contract = new web3.eth.Contract(ABI, contractAddress);
-      // const result = await contract.methods.getPriceHistory(tokenAddress, pairAddress, tf).call();
+      // Use the contract data directly instead of expecting initialData to be chart data
+      if (!contractInfo && !initialData) {
+        throw new Error("Contract information not available");
+      }
 
-      // For now, we'll simulate the data
+      // Use either the passed initialData or the contractInfo from the hook
+      const contractData = initialData || contractInfo;
+
+      // Extract relevant data from contractData
+      const tokenPrice =
+        Number.parseFloat(contractData?.tokenPrice) || 0.0000024;
+      const marketCap = Number.parseFloat(contractData?.marketCap) || 0;
+      const ethAmount = Number.parseFloat(contractData?.ethAmount) || 0;
+      const circulatingSupply =
+        Number.parseFloat(contractData?.circulatingSupply) || 0;
+
+      // Extract holder addresses if available
+      const addresses =
+        contractData?.holdersAddresses ||
+        contractData?.poolInfo?.holdersAddresses ||
+        [];
+      setHolderAddresses(addresses);
+
+      // Add this code to fetch the ETH price from your server
+      let ethPrice = 0;
+      try {
+        const priceResponse = await axios.get(
+          `${import.meta.env.VITE_SERVER_URL}/api/get-price`
+        );
+        const { pairPrice, pairDecimal } = priceResponse.data;
+
+        // Convert the price from wei to ETH based on the decimal places
+        ethPrice = Number(pairPrice) / Math.pow(10, Number(pairDecimal));
+        console.log("Fetched ETH price:", ethPrice);
+      } catch (error) {
+        console.error("Error fetching ETH price:", error);
+        // Fallback to a default ETH price if the fetch fails
+        ethPrice = 1800; // Default ETH price in USD
+      }
+
+      console.log("Using token price:", tokenPrice);
+      console.log("Using market cap:", marketCap);
+
+      // Generate time-based data points
       const now = new Date();
       const data = [];
-      const basePrice = 0.0000024;
       let timeIncrement;
+
+      // Use the current price as the base price for simulation
+      const basePrice = tokenPrice;
 
       switch (tf) {
         case "1h":
           timeIncrement = 60 * 1000; // 1 minute
           for (let i = 60; i >= 0; i--) {
             const time = new Date(now.getTime() - i * timeIncrement);
+            // Create a more realistic price movement based on current price
             const randomFactor = 1 + (Math.random() - 0.5) * 0.0002;
-            data.push({
-              time,
-              price: basePrice * randomFactor,
-              volume: Math.random() * 10000,
-            });
+            const price = basePrice * randomFactor;
+            // Volume should correlate somewhat with price changes
+            const volume =
+              Math.random() * 10000 * (1 + Math.abs(randomFactor - 1) * 10);
+            data.push({ time, price, volume });
           }
           break;
         case "24h":
@@ -204,11 +270,10 @@ export function BoundingTradingChart({
           for (let i = 48; i >= 0; i--) {
             const time = new Date(now.getTime() - i * timeIncrement);
             const randomFactor = 1 + (Math.random() - 0.5) * 0.001;
-            data.push({
-              time,
-              price: basePrice * randomFactor,
-              volume: Math.random() * 50000,
-            });
+            const price = basePrice * randomFactor;
+            const volume =
+              Math.random() * 50000 * (1 + Math.abs(randomFactor - 1) * 10);
+            data.push({ time, price, volume });
           }
           break;
         case "7d":
@@ -216,11 +281,10 @@ export function BoundingTradingChart({
           for (let i = 42; i >= 0; i--) {
             const time = new Date(now.getTime() - i * timeIncrement);
             const randomFactor = 1 + (Math.random() - 0.5) * 0.003;
-            data.push({
-              time,
-              price: basePrice * randomFactor,
-              volume: Math.random() * 200000,
-            });
+            const price = basePrice * randomFactor;
+            const volume =
+              Math.random() * 200000 * (1 + Math.abs(randomFactor - 1) * 10);
+            data.push({ time, price, volume });
           }
           break;
         case "30d":
@@ -228,11 +292,10 @@ export function BoundingTradingChart({
           for (let i = 30; i >= 0; i--) {
             const time = new Date(now.getTime() - i * timeIncrement);
             const randomFactor = 1 + (Math.random() - 0.5) * 0.01;
-            data.push({
-              time,
-              price: basePrice * randomFactor,
-              volume: Math.random() * 500000,
-            });
+            const price = basePrice * randomFactor;
+            const volume =
+              Math.random() * 500000 * (1 + Math.abs(randomFactor - 1) * 10);
+            data.push({ time, price, volume });
           }
           break;
         case "all":
@@ -240,11 +303,10 @@ export function BoundingTradingChart({
           for (let i = 12; i >= 0; i--) {
             const time = new Date(now.getTime() - i * timeIncrement);
             const randomFactor = 1 + (Math.random() - 0.5) * 0.03;
-            data.push({
-              time,
-              price: basePrice * randomFactor,
-              volume: Math.random() * 1000000,
-            });
+            const price = basePrice * randomFactor;
+            const volume =
+              Math.random() * 1000000 * (1 + Math.abs(randomFactor - 1) * 10);
+            data.push({ time, price, volume });
           }
           break;
         default:
@@ -252,11 +314,10 @@ export function BoundingTradingChart({
           for (let i = 48; i >= 0; i--) {
             const time = new Date(now.getTime() - i * timeIncrement);
             const randomFactor = 1 + (Math.random() - 0.5) * 0.001;
-            data.push({
-              time,
-              price: basePrice * randomFactor,
-              volume: Math.random() * 50000,
-            });
+            const price = basePrice * randomFactor;
+            const volume =
+              Math.random() * 50000 * (1 + Math.abs(randomFactor - 1) * 10);
+            data.push({ time, price, volume });
           }
       }
 
@@ -266,25 +327,36 @@ export function BoundingTradingChart({
       const priceChange = lastPrice - firstPrice;
       const priceChangePercentage = (priceChange / firstPrice) * 100;
 
-      // Calculate volume
-      const totalVolume = data.reduce((sum, item) => sum + item.volume, 0);
+      // Calculate a more realistic volume based on market cap and liquidity
+      const marketCapValue = Number.parseFloat(contractData?.marketCap || 0);
+      // If market cap is in ETH, convert to USD
+      const marketCapUSD = marketCapValue * ethPrice;
+      const estimatedVolume = marketCapUSD * 0.05; // Assume 5% of market cap is daily volume
 
-      // Update state
+      // Update state with real data
       setChartData(data);
       setPriceData({
         current: lastPrice,
         change: priceChange,
         changePercentage: priceChangePercentage,
       });
+
+      // Use real volume data if available
       setVolumeData({
-        current: totalVolume,
+        current: estimatedVolume.toLocaleString(),
         change: 0,
-        changePercentage: Math.random() * 20 - 10, // Random for demo
+        changePercentage: contractData?.progress
+          ? contractData.progress - 100
+          : Math.random() * 20 - 10,
       });
+
+      const ethAmountInEth = ethAmount / 1e18; // Convert wei to ETH
       setLiquidityData({
-        current: totalVolume * lastPrice * 0.3, // Simulated liquidity
+        current: ethAmountInEth * ethPrice,
         change: 0,
-        changePercentage: Math.random() * 15 - 7.5, // Random for demo
+        changePercentage: contractData?.progress
+          ? contractData.progress - 100
+          : Math.random() * 15 - 7.5,
       });
     } catch (err) {
       console.error("Error fetching chart data:", err);
@@ -294,7 +366,7 @@ export function BoundingTradingChart({
     }
   };
 
-  // Initialize chart
+  // Initialize price chart
   useEffect(() => {
     if (!chartRef.current || chartData.length === 0) return;
 
@@ -305,92 +377,71 @@ export function BoundingTradingChart({
 
     const ctx = chartRef.current.getContext("2d");
 
-    // Prepare data based on chart type
+    // Prepare data for price chart
     let datasets = [];
     const options = { ...defaultOptions };
 
-    if (chartType === "price") {
-      // Price chart
-      datasets = [
-        {
-          label: "Price",
-          data: chartData.map((item) => ({
-            x: item.time,
-            y: item.price,
-          })),
-          borderColor: "#018ABD",
-          backgroundColor: createGradient(ctx, "#018ABD"),
-          borderWidth: 2,
-          pointRadius: 0,
-          pointHoverRadius: 4,
-          pointBackgroundColor: "#018ABD",
-          pointHoverBackgroundColor: "#ffffff",
-          pointHoverBorderColor: "#018ABD",
-          pointHoverBorderWidth: 2,
-          tension: 0.4,
-          fill: true,
-        },
-      ];
+    // Price chart
+    datasets = [
+      {
+        label: "Price",
+        data: chartData.map((item) => ({
+          x: item.time,
+          y: item.price,
+        })),
+        borderColor: "#018ABD",
+        backgroundColor: createGradient(ctx, "#018ABD"),
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointBackgroundColor: "#018ABD",
+        pointHoverBackgroundColor: "#ffffff",
+        pointHoverBorderColor: "#018ABD",
+        pointHoverBorderWidth: 2,
+        tension: 0.4,
+        fill: true,
+      },
+    ];
 
-      // Add Moving Average if enabled
-      if (indicators.ma) {
-        const maData = calculateMA(chartData, 20);
-        datasets.push({
-          label: "MA (20)",
-          data: maData.map((item) => ({
-            x: item.time,
-            y: item.value,
-          })),
-          borderColor: "#f59e0b",
-          borderWidth: 1.5,
-          pointRadius: 0,
-          pointHoverRadius: 0,
-          tension: 0.4,
-          fill: false,
-        });
-      }
-
-      // Add EMA if enabled
-      if (indicators.ema) {
-        const emaData = calculateEMA(chartData, 20);
-        datasets.push({
-          label: "EMA (20)",
-          data: emaData.map((item) => ({
-            x: item.time,
-            y: item.value,
-          })),
-          borderColor: "#ec4899",
-          borderWidth: 1.5,
-          pointRadius: 0,
-          pointHoverRadius: 0,
-          tension: 0.4,
-          fill: false,
-        });
-      }
-    } else if (chartType === "volume") {
-      // Volume chart
-      datasets = [
-        {
-          label: "Volume",
-          data: chartData.map((item) => ({
-            x: item.time,
-            y: item.volume,
-          })),
-          backgroundColor: "#018ABD",
-          borderColor: "#018ABD",
-          borderWidth: 1,
-          borderRadius: 4,
-          barThickness: "flex",
-          maxBarThickness: 15,
-        },
-      ];
-
-      options.scales.y.ticks.callback = (value) => "$" + formatNumber(value);
+    // Add Moving Average if enabled
+    if (indicators.ma) {
+      const maData = calculateMA(chartData, 20);
+      datasets.push({
+        label: "MA (20)",
+        data: maData.map((item) => ({
+          x: item.time,
+          y: item.value,
+        })),
+        borderColor: "#f59e0b",
+        borderWidth: 1.5,
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        tension: 0.4,
+        fill: false,
+      });
     }
 
-    // Create chart
+    // Add EMA if enabled
+    if (indicators.ema) {
+      const emaData = calculateEMA(chartData, 20);
+      datasets.push({
+        label: "EMA (20)",
+        data: emaData.map((item) => ({
+          x: item.time,
+          y: item.value,
+        })),
+        borderColor: "#ec4899",
+        borderWidth: 1.5,
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        tension: 0.4,
+        fill: false,
+      });
+    }
+
+    // Create price chart
     const newChartInstance = new Chart(ctx, {
-      type: chartType === "price" ? "line" : "bar",
+      type: "line",
       data: {
         datasets,
       },
@@ -405,11 +456,13 @@ export function BoundingTradingChart({
         newChartInstance.destroy();
       }
     };
-  }, [chartData, chartType, timeframe, indicators]);
+  }, [chartData, timeframe, indicators]);
 
   // Fetch data on mount and when timeframe changes
   useEffect(() => {
-    fetchChartData(timeframe);
+    if (tokenAddress || pairAddress) {
+      fetchChartData(timeframe);
+    }
   }, [timeframe, tokenAddress, pairAddress]);
 
   // Helper function to create gradient
@@ -418,17 +471,6 @@ export function BoundingTradingChart({
     gradient.addColorStop(0, `${color}30`); // 30% opacity
     gradient.addColorStop(1, `${color}00`); // 0% opacity
     return gradient;
-  }
-
-  // Helper function to format numbers
-  function formatNumber(num) {
-    if (num >= 1000000) {
-      return (num / 1000000).toFixed(2) + "M";
-    } else if (num >= 1000) {
-      return (num / 1000).toFixed(2) + "K";
-    } else {
-      return num.toFixed(2);
-    }
   }
 
   // Helper function to calculate Moving Average
@@ -549,10 +591,124 @@ export function BoundingTradingChart({
       setAmount((1.0 * value).toString());
     }
   };
+  const { swap } = useBondingContract(tokenAddress);
 
   // Handle reset
   const handleReset = () => {
     setAmount("");
+  };
+
+  // Handle place order
+  const handlePlaceOrder = async () => {
+    if (!amount || Number.parseFloat(amount) <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+
+    try {
+      const amountValue = Number.parseFloat(amount);
+      const swapType = tradeTab === "buy" ? 1 : 2;
+
+      // For buy orders, we need to convert the amount to wei
+      const valueToSend = tradeTab === "buy" ? amountValue : 0;
+
+      // Get decimals from either contractInfo or initialData
+      const contractData = initialData || contractInfo;
+      const tokenDecimals =
+        contractData?.decimal || contractData?.poolInfo?.decimals || 18;
+
+      // For sell orders, we need to convert the token amount to the correct format
+      const tokenAmount =
+        tradeTab === "sell"
+          ? parseUnits(amount.toString(), tokenDecimals).toString()
+          : "0";
+
+      await swap(
+        tradeTab === "buy" ? "0" : tokenAmount,
+        swapType,
+        "0x",
+        valueToSend
+      );
+
+      // Reset amount after successful transaction
+      setAmount("");
+
+      // Refresh chart data
+      fetchChartData();
+    } catch (error) {
+      console.error("Error placing order:", error);
+      toast.error(
+        "Failed to place order: " + (error.message || "Unknown error")
+      );
+    }
+  };
+
+  useEffect(() => {
+    const fetchTokenBalance = async () => {
+      const contractData = initialData || contractInfo;
+
+      if (contractData && userAddress) {
+        try {
+          // This would be replaced with your actual token balance fetching logic
+          // For now, we'll use a simulated balance based on circulating supply
+          const circulatingSupply =
+            Number.parseFloat(contractData.circulatingSupply) || 0;
+          const simulatedBalance = circulatingSupply * 0.001;
+          setTokenBalance(simulatedBalance.toFixed(5));
+        } catch (error) {
+          console.error("Error fetching token balance:", error);
+          setTokenBalance("0");
+        }
+      }
+    };
+
+    fetchTokenBalance();
+  }, [contractInfo, initialData, userAddress]);
+
+  useEffect(() => {
+    if (contractInfo || initialData) {
+      const contractData = initialData || contractInfo;
+
+      // Get holders addresses from contract data
+      const addresses =
+        contractData?.holdersAddresses ||
+        contractData?.poolInfo?.holdersAddresses ||
+        [];
+
+      // Map addresses to transaction data if available
+      const holders =
+        addresses.length > 0
+          ? addresses.slice(0, 8).map((address, index) => {
+              return {
+                address: address, // Store the full address
+                displayAddress: `${address.substring(
+                  0,
+                  6
+                )}...${address.substring(address.length - 4)}`,
+                type: Math.random() > 0.3 ? "Buy" : "Sell", // Simulate more buys than sells
+                amount: (Math.random() * 0.001).toFixed(6),
+                currency: chainSymbol,
+                percentage: (Math.random() * 2 + 0.1).toFixed(4) + "%",
+                tag: index === 0 ? "DEV" : undefined, // Mark first address as DEV for demonstration
+              };
+            })
+          : [];
+
+      setTransactionsData(holders);
+    }
+  }, [contractInfo, initialData, chainSymbol]);
+
+  // Function to copy address to clipboard
+  const copyToClipboard = (address) => {
+    navigator.clipboard
+      .writeText(address)
+      .then(() => {
+        toast.success("Address copied to clipboard");
+      })
+      .catch((err) => {
+        console.error("Failed to copy address: ", err);
+        toast.error("Failed to copy address");
+      });
   };
 
   return (
@@ -580,7 +736,10 @@ export function BoundingTradingChart({
                   <span className="text-[#97CBDC] text-xs">Price</span>
                   <div className="flex items-center gap-2">
                     <span className="text-white font-medium">
-                      ${priceData.current.toFixed(8)}
+                      $
+                      {priceData.current < 0.00001
+                        ? priceData.current.toExponential(4)
+                        : priceData.current.toFixed(8)}
                     </span>
                     <span
                       className={cn(
@@ -651,39 +810,20 @@ export function BoundingTradingChart({
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
-              <Tabs
-                defaultValue="price"
-                value={chartType}
-                onValueChange={setChartType}
-                className="w-auto"
-              >
-                <TabsList className="bg-[#1D2538]/60 border border-[#475B74] p-1 rounded-lg h-9">
-                  <TabsTrigger
-                    value="price"
-                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#004581] data-[state=active]:to-[#018ABD] data-[state=active]:text-white data-[state=active]:shadow-none bg-transparent text-[#97CBDC] hover:text-white rounded-md px-3 h-7"
-                  >
-                    Price
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="volume"
-                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#004581] data-[state=active]:to-[#018ABD] data-[state=active]:text-white data-[state=active]:shadow-none bg-transparent text-[#97CBDC] hover:text-white rounded-md px-3 h-7"
-                  >
-                    Volume
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-
               <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    "px-3 py-1 h-9 rounded-lg",
+                    "px-3 py-1 h-9 rounded-lg cursor-pointer",
                     timeframe === "1h"
                       ? "bg-gradient-to-r from-[#004581] to-[#018ABD] text-white"
                       : "bg-[#1D2538]/60 text-[#97CBDC] hover:bg-[#1D2538] hover:text-white"
                   )}
-                  onClick={() => setTimeframe("1h")}
+                  onClick={() => {
+                    setTimeframe("1h");
+                    fetchChartData("1h");
+                  }}
                 >
                   1H
                 </Button>
@@ -691,12 +831,15 @@ export function BoundingTradingChart({
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    "px-3 py-1 h-9 rounded-lg",
+                    "px-3 py-1 h-9 rounded-lg cursor-pointer",
                     timeframe === "24h"
                       ? "bg-gradient-to-r from-[#004581] to-[#018ABD] text-white"
                       : "bg-[#1D2538]/60 text-[#97CBDC] hover:bg-[#1D2538] hover:text-white"
                   )}
-                  onClick={() => setTimeframe("24h")}
+                  onClick={() => {
+                    setTimeframe("24h");
+                    fetchChartData("24h");
+                  }}
                 >
                   24H
                 </Button>
@@ -704,12 +847,15 @@ export function BoundingTradingChart({
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    "px-3 py-1 h-9 rounded-lg",
+                    "px-3 py-1 h-9 rounded-lg cursor-pointer",
                     timeframe === "7d"
                       ? "bg-gradient-to-r from-[#004581] to-[#018ABD] text-white"
                       : "bg-[#1D2538]/60 text-[#97CBDC] hover:bg-[#1D2538] hover:text-white"
                   )}
-                  onClick={() => setTimeframe("7d")}
+                  onClick={() => {
+                    setTimeframe("7d");
+                    fetchChartData("7d");
+                  }}
                 >
                   7D
                 </Button>
@@ -717,12 +863,15 @@ export function BoundingTradingChart({
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    "px-3 py-1 h-9 rounded-lg",
+                    "px-3 py-1 h-9 rounded-lg cursor-pointer",
                     timeframe === "30d"
                       ? "bg-gradient-to-r from-[#004581] to-[#018ABD] text-white"
                       : "bg-[#1D2538]/60 text-[#97CBDC] hover:bg-[#1D2538] hover:text-white"
                   )}
-                  onClick={() => setTimeframe("30d")}
+                  onClick={() => {
+                    setTimeframe("30d");
+                    fetchChartData("30d");
+                  }}
                 >
                   30D
                 </Button>
@@ -730,12 +879,15 @@ export function BoundingTradingChart({
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    "px-3 py-1 h-9 rounded-lg",
+                    "px-3 py-1 h-9 rounded-lg cursor-pointer",
                     timeframe === "all"
                       ? "bg-gradient-to-r from-[#004581] to-[#018ABD] text-white"
                       : "bg-[#1D2538]/60 text-[#97CBDC] hover:bg-[#1D2538] hover:text-white"
                   )}
-                  onClick={() => setTimeframe("all")}
+                  onClick={() => {
+                    setTimeframe("all");
+                    fetchChartData("all");
+                  }}
                 >
                   ALL
                 </Button>
@@ -745,7 +897,7 @@ export function BoundingTradingChart({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="bg-[#1D2538]/60 text-[#97CBDC] hover:bg-[#1D2538] hover:text-white h-9 w-9 rounded-lg"
+                  className="bg-[#1D2538]/60 text-[#97CBDC] cursor-pointer hover:bg-[#1D2538] hover:text-white h-9 w-9 rounded-lg"
                   onClick={handleRefresh}
                 >
                   <RefreshCw className="h-4 w-4" />
@@ -759,7 +911,7 @@ export function BoundingTradingChart({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="bg-[#1D2538]/60 text-[#97CBDC] hover:bg-[#1D2538] hover:text-white h-9 rounded-lg flex items-center gap-1"
+                      className="bg-[#1D2538]/60 cursor-pointer text-[#97CBDC] hover:bg-[#1D2538] hover:text-white h-9 rounded-lg flex items-center gap-1"
                     >
                       Indicators
                       <ChevronDown className="h-4 w-4" />
@@ -773,7 +925,7 @@ export function BoundingTradingChart({
                         </span>
                         <button
                           className={cn(
-                            "w-8 h-4 rounded-full relative",
+                            "w-8 h-4 rounded-full relative cursor-pointer",
                             indicators.ma ? "bg-[#018ABD]" : "bg-[#475B74]/50"
                           )}
                           onClick={() => toggleIndicator("ma")}
@@ -790,7 +942,7 @@ export function BoundingTradingChart({
                         <span className="text-[#97CBDC] text-sm">EMA (20)</span>
                         <button
                           className={cn(
-                            "w-8 h-4 rounded-full relative",
+                            "w-8 h-4 rounded-full relative cursor-pointer",
                             indicators.ema ? "bg-[#018ABD]" : "bg-[#475B74]/50"
                           )}
                           onClick={() => toggleIndicator("ema")}
@@ -807,7 +959,7 @@ export function BoundingTradingChart({
                         <span className="text-[#97CBDC] text-sm">RSI (14)</span>
                         <button
                           className={cn(
-                            "w-8 h-4 rounded-full relative",
+                            "w-8 h-4 rounded-full relative cursor-pointer",
                             indicators.rsi ? "bg-[#018ABD]" : "bg-[#475B74]/50"
                           )}
                           onClick={() => toggleIndicator("rsi")}
@@ -827,7 +979,7 @@ export function BoundingTradingChart({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="bg-[#1D2538]/60 text-[#97CBDC] hover:bg-[#1D2538] hover:text-white h-9 w-9 rounded-lg"
+                  className="bg-[#1D2538]/60 cursor-pointer text-[#97CBDC] hover:bg-[#1D2538] hover:text-white h-9 w-9 rounded-lg"
                   onClick={toggleFullscreen}
                 >
                   <svg
@@ -1028,10 +1180,19 @@ export function BoundingTradingChart({
 
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-[#97CBDC]">Balance:</span>
-                  <span className="text-white">10024500.66858 ZTR</span>
+                  <span className="text-white">
+                    {tradeTab === "buy"
+                      ? `${tokenBalance} ${
+                          initialData?.poolInfo?.symbol || "ZTR"
+                        }`
+                      : `${nativeBalance || 0} ${
+                          account?.chain?.nativeCurrency?.symbol || "ETH"
+                        }`}
+                  </span>
                 </div>
 
                 <Button
+                  onClick={handlePlaceOrder}
                   className={cn(
                     "w-full h-14 cursor-pointer rounded-xl shadow-lg transition-all duration-200 font-medium text-lg",
                     tradeTab === "buy"
@@ -1070,58 +1231,154 @@ export function BoundingTradingChart({
             </TabsList>
 
             <TabsContent value="holders" className="p-6">
-              <div className="space-y-3">
-                {transactionsData.map((tx, index) => (
-                  <div
-                    key={index}
-                    className="bg-[#1D2538]/60 border border-[#475B74]/50 rounded-xl p-4 hover:bg-[#1D2538]/80 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[#97CBDC]">{tx.address}</span>
-                        {tx.tag && (
-                          <span className="bg-[#018ABD]/20 text-[#018ABD] px-2 py-0.5 rounded text-xs font-medium">
-                            {tx.tag}
-                          </span>
-                        )}
+              {transactionsData.length > 0 ? (
+                <div className="space-y-3">
+                  {transactionsData.map((tx, index) => (
+                    <div
+                      key={index}
+                      className="bg-[#1D2538]/60 border border-[#475B74]/50 rounded-xl p-4 hover:bg-[#1D2538]/80 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => copyToClipboard(tx.address)}
+                            className="text-[#97CBDC] hover:text-white transition-colors flex items-center"
+                            title="Click to copy full address"
+                          >
+                            {tx.displayAddress || tx.address}
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-3.5 w-3.5 ml-1 opacity-70"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                              />
+                            </svg>
+                          </button>
+                          {tx.tag && (
+                            <span className="bg-[#018ABD]/20 text-[#018ABD] px-2 py-0.5 rounded text-xs font-medium">
+                              {tx.tag}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-white font-medium">
+                          {tx.percentage}
+                        </span>
                       </div>
-                      <span className="text-white font-medium">
-                        {tx.percentage}
-                      </span>
                     </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <div className="bg-[#1D2538]/60 p-3 rounded-full mb-3">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#97CBDC"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="9" cy="7" r="4"></circle>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
                   </div>
-                ))}
-              </div>
+                  <h3 className="text-lg font-medium text-white mb-1">
+                    No Holders Found
+                  </h3>
+                  <p className="text-[#97CBDC] max-w-xs">
+                    There are currently no holders for this token.
+                  </p>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="transaction" className="p-6">
-              <div className="space-y-3">
-                {transactionsData.map((tx, index) => (
-                  <div
-                    key={index}
-                    className="bg-[#1D2538]/60 border border-[#475B74]/50 rounded-xl p-4 hover:bg-[#1D2538]/80 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[#97CBDC]">{tx.address}</span>
-                        <span
-                          className={cn(
-                            "px-2 py-0.5 rounded text-xs font-medium",
-                            tx.type === "Buy"
-                              ? "bg-[#4ade80]/20 text-[#4ade80]"
-                              : "bg-[#f87171]/20 text-[#f87171]"
-                          )}
-                        >
-                          {tx.type}
+              {transactionsData.length > 0 ? (
+                <div className="space-y-3">
+                  {transactionsData.map((tx, index) => (
+                    <div
+                      key={index}
+                      className="bg-[#1D2538]/60 border border-[#475B74]/50 rounded-xl p-4 hover:bg-[#1D2538]/80 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => copyToClipboard(tx.address)}
+                            className="text-[#97CBDC] hover:text-white transition-colors flex items-center"
+                            title="Click to copy full address"
+                          >
+                            {tx.displayAddress || tx.address}
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-3.5 w-3.5 ml-1 opacity-70"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                              />
+                            </svg>
+                          </button>
+                          <span
+                            className={cn(
+                              "px-2 py-0.5 rounded text-xs font-medium",
+                              tx.type === "Buy"
+                                ? "bg-[#4ade80]/20 text-[#4ade80]"
+                                : "bg-[#f87171]/20 text-[#f87171]"
+                            )}
+                          >
+                            {tx.type}
+                          </span>
+                        </div>
+                        <span className="text-white font-medium">
+                          {tx.amount} {chainSymbol}
                         </span>
                       </div>
-                      <span className="text-white font-medium">
-                        {tx.amount} {chainSymbol}
-                      </span>
                     </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <div className="bg-[#1D2538]/60 p-3 rounded-full mb-3">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#97CBDC"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline>
+                      <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path>
+                    </svg>
                   </div>
-                ))}
-              </div>
+                  <h3 className="text-lg font-medium text-white mb-1">
+                    No Transactions Found
+                  </h3>
+                  <p className="text-[#97CBDC] max-w-xs">
+                    There are currently no transactions for this token.
+                  </p>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </div>
