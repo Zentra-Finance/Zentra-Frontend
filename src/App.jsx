@@ -3,10 +3,10 @@ import RootLayout from "@/layouts/Layout";
 import { Routes, Route } from "react-router-dom";
 import Staking from "@/pages/Staking/Staking";
 import CreateToken from "@/pages/Tokens/CreateToken";
-import Bonding from "@/pages/Bonding/Index";
+import Bonding from "@/pages/Bonding";
 import Airdrop from "@/pages/Airdrop/Airdrop";
-import TokenLockPage from "@/pages/Lock/Index";
-import LPLockListPage from "@/pages/Lock/LP/Index";
+import TokenLockPage from "@/pages/Lock";
+import LPLockListPage from "@/pages/Lock/LP";
 import TokenLock from "@/pages/Lock/TOKEN";
 import FairLaunchPage from "@/pages/FairLaunch/FairLaunch";
 import FairLaunchViewPage from "@/pages/FairLaunch/FairLanchView";
@@ -15,9 +15,9 @@ import BondingTrading from "@/pages/Bonding/BondingTrading";
 import { BondingPoolContextProvider } from "@/context/bondingPoolContext";
 import { LaunchPadContextProvider } from "@/context/launchPadContext";
 import { FairPoolContextProvider } from "@/context/fairPoolContext";
-import LandingPage from "@/pages/LandingPage/Index";
-import LogoPage from "@/pages/LogoGuide/Index";
-import { PortfolioDashboard } from "@/pages/Portfolio/Index";
+import LandingPage from "@/pages/LandingPage";
+import LogoPage from "@/pages/LogoGuide";
+import { PortfolioDashboard } from "@/pages/Portfolio";
 
 const App = () => {
   return (
