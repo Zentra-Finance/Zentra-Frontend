@@ -13,7 +13,7 @@ import { parseUnits, formatUnits, parseEther } from "viem";
 import {
 	BONDING_POOL_ABI,
 	PHAROS_BONDING_CONTRACT_ADDRESS,
-	CELO_BOUNDING_CONTRACT_ADDRESS,
+	CELO_BONDING_CONTRACT_ADDRESS,
 } from "@/utils/ABI/BondingPool";
 import {
 	POOL_FACTORY_ABI,
@@ -55,7 +55,7 @@ export function useBondingPool() {
 		}
 		// Celo Alfajores
 		if (chainId === 44787) {
-			return CELO_BOUNDING_CONTRACT_ADDRESS;
+			return CELO_BONDING_CONTRACT_ADDRESS;
 		}
 		return null;
 	}, [chainId]);

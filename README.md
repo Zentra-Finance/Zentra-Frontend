@@ -93,7 +93,7 @@ src/
 │   ├── Tokens/   # Token creation and management
 │   ├── Lock/     # Token locking
 │   ├── Airdrop/  # Airdrop distribution
-│   ├── Bounding/ # Token bonding
+│   ├── Bonding/ # Token bonding
 │   └── FairLaunch/ # Fair launch mechanism
 ├── utils/        # Utility functions and ABIs
 │   ├── ABI/      # Smart contract ABIs
