@@ -36,7 +36,7 @@ export default function BasicInfoForm({
             onChange={handleInputChange}
             placeholder="Eg: Degen Coin"
             className={cn(
-              "bg-[#1D2538]/70 border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-[#018ABD] transition-all duration-200",
+              "bg-[#1D2538]/70 border-[#475B74]/50 rounded-lg text-white placeholder:text-[#97CBDC]/50 focus:border-[#018ABD] transition-all duration-200",
               errors.name && "border-red-500 focus:border-red-500"
             )}
           />
@@ -60,7 +60,7 @@ export default function BasicInfoForm({
             onChange={handleInputChange}
             placeholder="Eg: DGN"
             className={cn(
-              "bg-[#1D2538]/70 border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-[#018ABD] transition-all duration-200",
+              "bg-[#1D2538]/70 border-[#475B74]/50 text-white rounded-lg placeholder:text-[#97CBDC]/50 focus:border-[#018ABD] transition-all duration-200",
               errors.symbol && "border-red-500 focus:border-red-500"
             )}
           />
@@ -87,7 +87,7 @@ export default function BasicInfoForm({
             onChange={handleInputChange}
             placeholder="Eg: 1000000000"
             className={cn(
-              "bg-[#1D2538]/70 border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-[#018ABD] transition-all duration-200",
+              "bg-[#1D2538]/70 border-[#475B74]/50 text-white rounded-lg placeholder:text-[#97CBDC]/50 focus:border-[#018ABD] transition-all duration-200",
               errors.supply && "border-red-500 focus:border-red-500"
             )}
           />
@@ -111,7 +111,7 @@ export default function BasicInfoForm({
             onChange={handleInputChange}
             placeholder="Eg: 18"
             className={cn(
-              "bg-[#1D2538]/70 border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-[#018ABD] transition-all duration-200",
+              "bg-[#1D2538]/70 border-[#475B74]/50 text-white rounded-lg placeholder:text-[#97CBDC]/50 focus:border-[#018ABD] transition-all duration-200",
               errors.decimals && "border-red-500 focus:border-red-500"
             )}
           />

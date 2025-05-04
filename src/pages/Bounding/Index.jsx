@@ -240,12 +240,12 @@ export default function Bounding() {
 				);
 				const receipt = await response.wait();
 				console.log(receipt);
-        toast.success("Bonding token created successfully")
+				toast.success("Bonding token created successfully");
 			}
 		} catch (error) {
 			console.error("Error creating Bonding sale:", error);
 			setError(error.message || "Failed to create Bonding sale");
-      toast.error("Failed to create Bonding sale")
+			toast.error("Failed to create Bonding sale");
 			setIsSubmitting(false);
 		} finally {
 			setIsSubmitting(false);

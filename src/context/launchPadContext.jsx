@@ -5,7 +5,7 @@ import {
 	useEffect,
 	useState,
 } from "react";
-import { Contract, Interface } from "ethers";
+import { Contract, ethers, Interface } from "ethers";
 // import ABI from "../ABI/pool.json";
 import usePoolManagerContract from "@/hooks/usePoolManagerContract";
 import useEthersProvider from "@/hooks/useEthersProvider";
@@ -55,6 +55,7 @@ export const LaunchPadContextProvider = ({ children }) => {
 		const bondingPoolItf = new Interface(BONDING_POOL_ABI);
 
 		try {
+			
 			const allFairPools = await readOnlyPoolManagerContract.getAllFairPools();
 			// console.log({allFairPools})
 			const allBondingPools =
@@ -130,6 +131,7 @@ export const LaunchPadContextProvider = ({ children }) => {
 				// const kycStatus = fairPools[3][3];
 				const softCap = fairPools[3][4];
 				const poolState = fairPools[2][0];
+
 				console.log({ poolState });
 
 				const date = new Date(Number(startTimestamp) * 1000);
@@ -158,11 +160,11 @@ export const LaunchPadContextProvider = ({ children }) => {
 					status: status,
 					icon: "/Pharos-chain.jpg",
 					backgroundImage: "vite.svg",
-					progress: 0,
+					progress: (Number(totalRaised) / Number(softCap)) * 100,
 					startTime: startTime,
 					startTimeRaw: startTimeRaw,
 					featured: false,
-					participants: 0,
+					participants: '',
 				};
 			});
 			/**

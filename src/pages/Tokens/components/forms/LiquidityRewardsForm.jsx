@@ -101,7 +101,7 @@ export default function LiquidityRewardsForm({
             onChange={handleInputChange}
             placeholder="0"
             disabled={formState.dexRouter === "ZENTRA-v3"}
-            className="bg-[#1D2538]/70 border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-[#018ABD] transition-all duration-200"
+            className="bg-[#1D2538]/70 text-white border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-[#018ABD] transition-all duration-200"
           />
         </div>
         <div>
@@ -130,7 +130,7 @@ export default function LiquidityRewardsForm({
             onChange={handleInputChange}
             placeholder="0"
             disabled={formState.dexRouter === "ZENTRA-v3"}
-            className="bg-[#1D2538]/70 border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-[#018ABD] transition-all duration-200"
+            className="bg-[#1D2538]/70 text-white border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-[#018ABD] transition-all duration-200"
           />
         </div>
       </div>
@@ -221,7 +221,7 @@ export default function LiquidityRewardsForm({
               formState.dexRouter === "ZENTRA-v3" &&
               formState.rewardsToken !== "project-token"
             }
-            className="bg-[#1D2538]/70 border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-purple-500 transition-all duration-200"
+            className="bg-[#1D2538]/70 text-white border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-purple-500 transition-all duration-200"
           />
         </div>
         <div>
@@ -253,7 +253,7 @@ export default function LiquidityRewardsForm({
               formState.dexRouter === "ZENTRA-v3" &&
               formState.rewardsToken !== "project-token"
             }
-            className="bg-[#1D2538]/70 border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-purple-500 transition-all duration-200"
+            className="bg-[#1D2538]/70 text-white border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-purple-500 transition-all duration-200"
           />
         </div>
       </div>
