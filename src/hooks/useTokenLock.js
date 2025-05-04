@@ -8,7 +8,7 @@ import {
 } from "wagmi";
 import { readContract, waitForTransaction, multicall } from "@wagmi/core";
 import { parseUnits } from "viem";
-import { erc20Abi } from "@/utils/ABI/Index";
+import { erc20Abi } from "@/utils/ABI";
 import { toast } from "react-toastify";
 import { config } from "@/providers/Wagmi";
 import {
@@ -16,7 +16,7 @@ import {
   FACTORY_ABI,
   TOKEN_LOCKER_ABI,
   LP_FACTORY_ADDRESSES,
-} from "@/utils/ABI/Lock/Index";
+} from "@/utils/ABI/Lock";
 
 // Utility function for multicall across chains
 export async function multiChainMulticall(chainConfigs) {

@@ -12,7 +12,7 @@ import useEthersProvider from "@/hooks/useEthersProvider";
 import {
 	POOL_FACTORY_ABI,
 	PAHROS_POOL_FACTORY_ADDRESS,
-} from "@/utils/ABI/PoolFactory/Index";
+} from "@/utils/ABI/PoolFactory";
 import { useAccount } from "wagmi";
 
 export const BondingPoolContext = createContext({

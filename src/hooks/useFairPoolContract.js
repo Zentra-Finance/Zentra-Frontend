@@ -3,7 +3,7 @@ import { Contract } from "ethers";
 import useEthersProvider from "./useEthersProvider";
 import {
     FAIR_POOL_ABI,
-} from "@/utils/ABI/FairPool/Index";
+} from "@/utils/ABI/FairPool";
 // import { useLocation } from "react-router-dom";
 import { useParams } from 'react-router-dom';
 

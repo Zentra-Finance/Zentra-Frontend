@@ -14,13 +14,13 @@ import {
 	BONDING_POOL_ABI,
 	PHAROS_BONDING_CONTRACT_ADDRESS,
 	CELO_BONDING_CONTRACT_ADDRESS,
-} from "@/utils/ABI/BondingPool/Index";
+} from "@/utils/ABI/BondingPool";
 import {
 	POOL_FACTORY_ABI,
 	PAHROS_POOL_FACTORY_ADDRESS,
 	CELO_POOL_FACTORY_ADDRESS,
-} from "@/utils/ABI/PoolFactory/Index";
-import { erc20Abi } from "@/utils/ABI/Index";
+} from "@/utils/ABI/PoolFactory";
+import { erc20Abi } from "@/utils/ABI";
 import { toast } from "react-toastify";
 import { config } from "@/providers/Wagmi";
 

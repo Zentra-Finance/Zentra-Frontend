@@ -7,7 +7,7 @@ import {
 } from "react";
 import { Contract, ethers, formatEther, formatUnits, Interface } from "ethers";
 import useEthersProvider from "@/hooks/useEthersProvider";
-import { FAIR_POOL_ABI } from "@/utils/ABI/FairPool/Index";
+import { FAIR_POOL_ABI } from "@/utils/ABI/FairPool";
 
 import { useAccount } from "wagmi";
 import useFairPoolContract from "@/hooks/useFairPoolContract";

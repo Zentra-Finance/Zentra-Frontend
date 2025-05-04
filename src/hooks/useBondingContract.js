@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useReadContract, useWriteContract, useAccount } from "wagmi";
-import { BONDING_POOL_ABI } from "@/utils/ABI/BondingPool/Index";
+import { BONDING_POOL_ABI } from "@/utils/ABI/BondingPool";
 import { formatUnits, parseUnits } from "viem";
-import { erc20Abi } from "@/utils/ABI/Index";
+import { erc20Abi } from "@/utils/ABI";
 import { toast } from "react-toastify";
 import axios from "axios";
 

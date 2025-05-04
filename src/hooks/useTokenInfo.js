@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useReadContract } from "wagmi";
-import { erc20Abi } from "@/utils/ABI/Index";
+import { erc20Abi } from "@/utils/ABI";
 import { formatUnits } from "viem";
 
 export function useTokenInfo(tokenAddress, userAddress) {

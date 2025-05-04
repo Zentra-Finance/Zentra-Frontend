@@ -31,7 +31,7 @@ import useEthersProvider from "@/hooks/useEthersProvider";
 import {
 	BONDING_POOL_ABI,
 	PHAROS_BONDING_CONTRACT_ADDRESS,
-} from "@/utils/ABI/BondingPool/Index";
+} from "@/utils/ABI/BondingPool";
 import { Contract, parseEther } from "ethers";
 // Helper function to format numbers
 function formatNumber(num) {

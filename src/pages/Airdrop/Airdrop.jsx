@@ -23,10 +23,10 @@ import { cn } from "@/lib/utils";
 import AirdropHeader from "./Header";
 import { useAccount } from "wagmi";
 import ConnectWallet from "../../components/ui/ConnectButton";
-import { erc20Abi } from "@/utils/ABI/Index";
+import { erc20Abi } from "@/utils/ABI";
 import { toast } from "react-toastify";
 import { useTokenAirdrop } from "@/hooks/useTokenAirdrop";
-import AirdropSuccessModal from "./Modal/Index";
+import AirdropSuccessModal from "./Modal";
 import { useTokenInfo } from "@/hooks/useTokenInfo";
 
 // Function to validate and count addresses

@@ -21,7 +21,7 @@ import {
 	ADVANCED_TOKEN_BYTECODE,
 	ZENTRA_ROUTER_ADDRESS,
 	ZENTRA_V3_ROUTER_ADDRESS,
-} from "@/utils/AdvanceToken/Index";
+} from "@/utils/AdvanceToken";
 import { toast } from "react-toastify";
 import { set } from "date-fns";
 
