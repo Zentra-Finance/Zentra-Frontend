@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { BoundingTradingChart } from "../components/BoundingChart";
+import { BondingTradingChart } from "../components/BondingChart";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Star, Info, Share, X, Twitter, Globe } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
@@ -8,20 +8,20 @@ import { cn } from "@/lib/utils";
 import { useBondingContract } from "@/hooks/useBondingContract";
 import { useAccount } from "wagmi";
 
-export default function BoundingChartPage() {
-	const { boundingAddress } = useParams();
+export default function BondingChartPage() {
+	const { bondingAddress } = useParams();
 	const { contractInfo, isLoading, error, fetchContractInfo } =
-		useBondingContract(boundingAddress);
+		useBondingContract(bondingAddress);
 	const account = useAccount();
 	const [isFavorite, setIsFavorite] = useState(false);
 	const [showFullDescription, setShowFullDescription] = useState(false);
 
 	// Fetch contract data when component mounts
 	useEffect(() => {
-		if (boundingAddress) {
+		if (bondingAddress) {
 			fetchContractInfo();
 		}
-	}, [boundingAddress, fetchContractInfo]);
+	}, [bondingAddress, fetchContractInfo]);
 
 	const toggleFavorite = () => {
 		setIsFavorite(!isFavorite);
@@ -97,9 +97,9 @@ export default function BoundingChartPage() {
 	const tokenDescription =
 		contractInfo.poolDetails?.description || "No description available";
 
-	const shortenedAddress = boundingAddress
-		? `${boundingAddress.substring(0, 6)}...${boundingAddress.substring(
-				boundingAddress.length - 4
+	const shortenedAddress = bondingAddress
+		? `${bondingAddress.substring(0, 6)}...${bondingAddress.substring(
+				bondingAddress.length - 4
 		  )}`
 		: "";
 
@@ -133,7 +133,7 @@ export default function BoundingChartPage() {
 									{shortenedAddress}
 								</span>
 								<a
-									href={`${account?.chain?.blockExplorers?.default?.url}/address/${boundingAddress}`}
+									href={`${account?.chain?.blockExplorers?.default?.url}/address/${bondingAddress}`}
 									target="_blank"
 									rel="noopener noreferrer"
 									className="text-[#018ABD] hover:text-[#004581] text-sm flex items-center"
@@ -345,8 +345,8 @@ export default function BoundingChartPage() {
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.4, delay: 0.2 }}
 				>
-					<BoundingTradingChart
-						tokenAddress={boundingAddress}
+					<BondingTradingChart
+						tokenAddress={bondingAddress}
 						pairAddress={contractInfo.poolInfo?.v3Pair}
 						initialData={contractInfo}
 					/>

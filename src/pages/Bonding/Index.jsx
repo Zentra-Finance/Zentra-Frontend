@@ -20,7 +20,7 @@ import usePoolFactoryContract from "@/hooks/usePoolFactoryContract";
 import { parseEther } from "ethers";
 import { toast } from "react-toastify";
 
-export default function Bounding() {
+export default function Bonding() {
 	const { isConnected } = useAccount();
 	const account = useAccount();
 	const [formState, setFormState] = useState({

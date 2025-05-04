@@ -3,7 +3,7 @@ import RootLayout from "@/layouts/Layout";
 import { Routes, Route } from "react-router-dom";
 import Staking from "@/pages/Staking/Staking";
 import CreateToken from "@/pages/Tokens/CreateToken";
-import Bounding from "@/pages/Bounding/Index";
+import Bonding from "@/pages/Bonding/Index";
 import Airdrop from "@/pages/Airdrop/Airdrop";
 import TokenLockPage from "@/pages/Lock/Index";
 import LPLockListPage from "@/pages/Lock/LP/Index";
@@ -11,7 +11,7 @@ import TokenLock from "@/pages/Lock/TOKEN";
 import FairLaunchPage from "@/pages/FairLaunch/FairLaunch";
 import FairLaunchViewPage from "@/pages/FairLaunch/FairLanchView";
 import Launchpad from "@/pages/Launchpad";
-import BoundingTrading from "@/pages/Bounding/BoundingTrading";
+import BondingTrading from "@/pages/Bonding/BondingTrading";
 import { BondingPoolContextProvider } from "@/context/bondingPoolContext";
 import { LaunchPadContextProvider } from "@/context/launchPadContext";
 import { FairPoolContextProvider } from "@/context/fairPoolContext";
@@ -42,13 +42,13 @@ const App = () => {
             path="/bonding-token-sale"
             element={
               <BondingPoolContextProvider>
-                <Bounding />
+                <Bonding />
               </BondingPoolContextProvider>
             }
           />
           <Route
-            path="/bonding-details/:boundingAddress"
-            element={<BoundingTrading />}
+            path="/bonding-details/:bondingAddress"
+            element={<BondingTrading />}
           />
           <Route path="/airdrop" element={<Airdrop />} />
           <Route path="/fair-launch" element={<FairLaunchPage />} />
