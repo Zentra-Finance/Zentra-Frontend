@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
 	Copy,
@@ -32,12 +32,15 @@ import { parseEther } from "ethers";
 import { toast } from "react-toastify";
 import { useAccount } from "wagmi";
 
-export default function FairLaunchViewPage({ params }) {
+function FairLaunchViewPage() {
 	const { address } = useAccount();
 	const { contractAddress } = useParams();
 	const fairPoolContract = useFairPoolContract(true);
-	const [isContributing, setIsContributing] = useState(false);
+	const readOnlyFairPoolContract = useFairPoolContract(false);
 
+	const [isContributing, setIsContributing] = useState(false);
+	const [isFinalizing, setIsFinalizing] = useState(false);
+	const [isClaiming, setIsClaiming] = useState(false);
 	// const [token, setToken] = useState(null);
 	const [timeLeft, setTimeLeft] = useState({
 		days: 0,
@@ -50,27 +53,59 @@ export default function FairLaunchViewPage({ params }) {
 	const [activeTab, setActiveTab] = useState("overview");
 	const [myContribution, setMyContribution] = useState(0);
 	// const [participants, setParticipants] = useState([]);
-	const { token, participants, loading, setToken, setParticipants } =
-		useFairPools();
-	// console.log({loading})
+	const { token, participants, loading, setToken, owner } = useFairPools();
+	console.log({ owner });
+	const [claimableAmount, setClaimableAmount] = useState(0);
+	useEffect(() => {
+		if (token?.poolState !== 1) return;
+		const getClaimableAmount = async () => {
+			try {
+				const userAvalibleClaim =
+					await readOnlyFairPoolContract.userAvalibleClaim(address);
+				console.log({
+					userAvalibleClaim: (
+						Number(userAvalibleClaim) /
+						10 ** token.decimals
+					).toLocaleString(),
+				});
+				setClaimableAmount(
+					Number(userAvalibleClaim)
+						? (
+								Number(userAvalibleClaim) /
+								10 ** token.decimals
+						  ).toLocaleString()
+						: 0
+				);
+			} catch (error) {
+				console.log(error);
+			}
+		};
+		if (address) {
+			getClaimableAmount();
+		}
+	}, [address, token.poolState]);
+
 	const getMyContribution = useCallback(() => {
 		if (address) {
 			const myContr = participants.filter((participant) => {
 				return participant.id === address;
 			});
-			// use reduce to sumup
+
+			console.log({ myContr });
 
 			const totalContribution = myContr.reduce(
-				(acc, curr) => acc + Number.parseFloat(curr.amount),
+				(acc, curr) => acc + Number(curr.amount),
 				0
 			);
-			setMyContribution(totalContribution);
+			console.log({ totalContribution });
+			setMyContribution(totalContribution.toFixed(3));
 		} else {
 			setMyContribution(0);
 		}
 	}, [participants.length]);
 
 	useEffect(() => {
+		console.log("useEffe");
 		getMyContribution();
 	}, [getMyContribution]);
 	const calculateTimeLeft = useCallback(() => {
@@ -132,7 +167,47 @@ export default function FairLaunchViewPage({ params }) {
 		}
 	};
 
-	const handleContribute = async () => {
+	const handleFinalize = async () => {
+		try {
+			setIsFinalizing(true);
+			const response = await fairPoolContract.finalize({
+				gasLimit: BigInt(5_000_000),
+			});
+			const receipt = await response.wait();
+			console.log(receipt);
+			toast.success("Sale finalized successfully!");
+			setToken((prev) => ({
+				...prev,
+				poolState: 1,
+				status: "COMPLETED",
+			}));
+		} catch (error) {
+			console.error("Sale finalization failed:", error);
+			toast.error("Sale finalization failed. Please try again.");
+		} finally {
+			setIsFinalizing(false);
+		}
+	};
+	const handleClaim = async () => {
+		try {
+			setIsClaiming(true);
+			setIsFinalizing(true);
+			const response = await fairPoolContract.claim({
+				gasLimit: BigInt(3_000_000),
+			});
+			const receipt = await response.wait();
+			console.log(receipt);
+			toast.success("Sale finalized successfully!");
+			setClaimableAmount(0);
+		} catch (error) {
+			console.error("Sale finalization failed:", error);
+			toast.error("Sale finalization failed. Please try again.");
+		} finally {
+			setIsClaiming(false);
+		}
+	};
+
+	const handleContribute = useCallback(async () => {
 		if (contributionAmount < 0.1 || contributionAmount > 1) {
 			toast.error("Contribution amount must be between 0.1 and 1 PTT");
 			return;
@@ -149,6 +224,7 @@ export default function FairLaunchViewPage({ params }) {
 			const receipt = await response.wait();
 			console.log(receipt);
 			toast.success("Contribution successful!");
+
 			setContributionAmount("0");
 		} catch (error) {
 			console.error("Contribution failed:", error);
@@ -156,9 +232,9 @@ export default function FairLaunchViewPage({ params }) {
 		} finally {
 			setIsContributing(false);
 		}
-	};
+	}, []);
 
-	const handleEditSubmit = (data) => {
+	const handleEditSubmit = useCallback((data) => {
 		console.log("Token updated:", data);
 		// Here you would typically send the data to your API/contract
 		// For now, we'll update the local state to simulate the change
@@ -168,9 +244,9 @@ export default function FairLaunchViewPage({ params }) {
 			startTimeRaw: data.startTime.toISOString(),
 			endTimeRaw: data.endTime.toISOString(),
 		}));
-	};
+	}, []);
 
-	const formatDate = (dateString) => {
+	const formatDate = useCallback((dateString) => {
 		const date = new Date(dateString);
 		return date.toLocaleString("en-US", {
 			year: "numeric",
@@ -179,7 +255,7 @@ export default function FairLaunchViewPage({ params }) {
 			hour: "2-digit",
 			minute: "2-digit",
 		});
-	};
+	}, []);
 
 	if (loading) {
 		return (
@@ -206,7 +282,33 @@ export default function FairLaunchViewPage({ params }) {
 			</div>
 		);
 	}
+	const activeStyle =
+		"absolute left-[-29px] top-0 h-6 w-6 rounded-full bg-gradient-to-r from-[#004581] to-[#018ABD] flex items-center justify-center";
+	const inActiveStyle =
+		"absolute left-[-29px] top-0 h-6 w-6 rounded-full bg-[#1D2538] border-2 border-[#475B74] flex items-center justify-center";
+	const getSaleStartStyle = () => {
+		if (token.status === "UPCOMING") {
+			return inActiveStyle;
+		} else {
+			return activeStyle;
+		}
+	};
 
+	const getSaleEndStyle = () => {
+		if (token.status === "ENDED" || token.status === "COMPLETED") {
+			return activeStyle;
+		} else {
+			return inActiveStyle;
+		}
+	};
+
+	const getOtherStyle = () => {
+		if (token.poolState === 1) {
+			return activeStyle;
+		} else {
+			return inActiveStyle;
+		}
+	};
 	const getStatusColor = () => {
 		switch (token.status) {
 			case "LIVE":
@@ -418,7 +520,7 @@ export default function FairLaunchViewPage({ params }) {
 											<div className="flex justify-between items-center py-2 border-b border-[#475B74]/30">
 												<span className="text-[#97CBDC]">Softcap</span>
 												<span className="text-white font-medium">
-													{token.softcap}
+													{token.softcap} PTT
 												</span>
 											</div>
 											{/* 
@@ -452,7 +554,7 @@ export default function FairLaunchViewPage({ params }) {
 
 									<div className="relative pl-8 space-y-8 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-gradient-to-b before:from-[#004581] before:to-[#018ABD]">
 										<div className="relative">
-											<div className="absolute left-[-29px] top-0 h-6 w-6 rounded-full bg-gradient-to-r from-[#004581] to-[#018ABD] flex items-center justify-center">
+											<div className={getSaleStartStyle()}>
 												<div className="h-2 w-2 rounded-full bg-white"></div>
 											</div>
 											<h3 className="text-lg font-medium text-white">
@@ -464,7 +566,7 @@ export default function FairLaunchViewPage({ params }) {
 										</div>
 
 										<div className="relative">
-											<div className="absolute left-[-29px] top-0 h-6 w-6 rounded-full bg-gradient-to-r from-[#004581] to-[#018ABD] flex items-center justify-center">
+											<div className={getSaleEndStyle()}>
 												<div className="h-2 w-2 rounded-full bg-white"></div>
 											</div>
 											<h3 className="text-lg font-medium text-white">
@@ -476,7 +578,7 @@ export default function FairLaunchViewPage({ params }) {
 										</div>
 
 										<div className="relative">
-											<div className="absolute left-[-29px] top-0 h-6 w-6 rounded-full bg-[#1D2538] border-2 border-[#475B74] flex items-center justify-center">
+											<div className={getOtherStyle()}>
 												<div className="h-2 w-2 rounded-full bg-[#97CBDC]"></div>
 											</div>
 											<h3 className="text-lg font-medium text-white">
@@ -486,7 +588,7 @@ export default function FairLaunchViewPage({ params }) {
 										</div>
 
 										<div className="relative">
-											<div className="absolute left-[-29px] top-0 h-6 w-6 rounded-full bg-[#1D2538] border-2 border-[#475B74] flex items-center justify-center">
+											<div className={getOtherStyle()}>
 												<div className="h-2 w-2 rounded-full bg-[#97CBDC]"></div>
 											</div>
 											<h3 className="text-lg font-medium text-white">
@@ -731,7 +833,7 @@ export default function FairLaunchViewPage({ params }) {
 								</div>
 							</div>
 
-							<div className="grid grid-cols-2 gap-4 mb-6">
+							<div className=" mb-6">
 								<div className="bg-[#1D2538]/60 rounded-xl p-3 border border-[#475B74]/50">
 									<div className="flex items-center gap-2 mb-1">
 										<Users className="h-4 w-4 text-[#018ABD]" />
@@ -742,15 +844,15 @@ export default function FairLaunchViewPage({ params }) {
 									</p>
 								</div>
 
-								<div className="bg-[#1D2538]/60 rounded-xl p-3 border border-[#475B74]/50">
+								{/* <div className="bg-[#1D2538]/60 rounded-xl p-3 border border-[#475B74]/50">
 									<div className="flex items-center gap-2 mb-1">
 										<DollarSign className="h-4 w-4 text-[#018ABD]" />
 										<span className="text-xs text-[#97CBDC]">Token Price</span>
 									</div>
 									<p className="text-sm font-semibold text-white truncate">
-										{token.rate /*.split(" = ")[1]*/}
+										{token.rate }
 									</p>
-								</div>
+								</div> */}
 							</div>
 
 							<div className="space-y-4">
@@ -765,74 +867,153 @@ export default function FairLaunchViewPage({ params }) {
 									</div>
 								</div>
 							</div>
+							{owner?.toLowerCase() === address?.toLowerCase() &&
+								token.status === "COMPLETED" && (
+									<motion.div
+										whileHover={{ scale: 1.03 }}
+										whileTap={{ scale: 0.97 }}
+									>
+										<Button
+											disabled={isFinalizing || token.poolState === 1}
+											onClick={handleFinalize}
+											// onClick={handleContribute}
+											className="w-full mt-4 cursor-pointer bg-gradient-to-r from-[#0a6802] to-[#01bd94] hover:from-[#006e00] hover:to-[#01a38d] text-white rounded-xl h-12 shadow-lg shadow-[#004581]/20 transition-all duration-200 font-medium group"
+										>
+											<span>{isFinalizing ? "FInalizing" : "FINALIZE"}</span>
+											<ArrowUpRight className="h-4 w-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+										</Button>
+									</motion.div>
+								)}
 						</motion.div>
 
 						{/* Contribute Form */}
-						<motion.div
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.5, delay: 0.1 }}
-							className="bg-gradient-to-b from-[#1D2538]/90 to-[#1D2538] rounded-3xl overflow-hidden border border-[#475B74]/50 shadow-xl backdrop-blur-sm p-6"
-						>
-							<h2 className="text-xl font-bold text-white mb-4">Contribute</h2>
+						{token.poolState === 0 && (
+							<motion.div
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.5, delay: 0.1 }}
+								className="bg-gradient-to-b from-[#1D2538]/90 to-[#1D2538] rounded-3xl overflow-hidden border border-[#475B74]/50 shadow-xl backdrop-blur-sm p-6"
+							>
+								<h2 className="text-xl font-bold text-white mb-4">
+									Contribute
+								</h2>
 
-							<div className="space-y-4">
-								<div className="relative">
-									<Input
-										type="number"
-										min="0.1"
-										max="1"
-										value={contributionAmount}
-										onChange={(e) => setContributionAmount(e.target.value)}
-										className="bg-[#1D2538]/60 border-[#475B74] text-white h-12 rounded-xl focus:border-[#018ABD] focus:ring-1 focus:ring-[#018ABD] pr-20"
-										placeholder="0"
-									/>
-									<div className="absolute right-1 top-1 flex items-center">
-										<span className="text-[#97CBDC] mr-2">PTT</span>
+								<div className="space-y-4">
+									<div className="relative">
+										<Input
+											type="number"
+											min="0.1"
+											max="1"
+											disabled={token.status === "COMPLETED"}
+											value={contributionAmount}
+											onChange={(e) => setContributionAmount(e.target.value)}
+											className="bg-[#1D2538]/60 border-[#475B74] text-white h-12 rounded-xl focus:border-[#018ABD] focus:ring-1 focus:ring-[#018ABD] pr-20"
+											placeholder="0"
+										/>
+										<div className="absolute right-1 top-1 flex items-center">
+											<span className="text-[#97CBDC] mr-2">PTT</span>
+											<Button
+												disabled={token.status === "COMPLETED"}
+												onClick={handleMaxContribution}
+												className="bg-gradient-to-r from-[#004581] to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white h-10 rounded-lg"
+											>
+												Max
+											</Button>
+										</div>
+									</div>
+
+									<motion.div
+										whileHover={{ scale: 1.03 }}
+										whileTap={{ scale: 0.97 }}
+									>
 										<Button
-											onClick={handleMaxContribution}
-											className="bg-gradient-to-r from-[#004581] to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white h-10 rounded-lg"
+											disabled={isContributing || token.status === "COMPLETED"}
+											onClick={handleContribute}
+											className="w-full bg-gradient-to-r from-[#004581] to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white rounded-xl h-12 shadow-lg shadow-[#004581]/20 transition-all duration-200 font-medium group"
 										>
-											Max
+											<span>
+												{isContributing ? "Contributing" : "CONTRIBUTE NOW"}
+											</span>
+											<ArrowUpRight className="h-4 w-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 										</Button>
+									</motion.div>
+
+									<div className="flex justify-between pt-4">
+										<div className="text-[#97CBDC]">My Contribution</div>
+										<div className="text-white">{myContribution} PTT</div>
 									</div>
 								</div>
+							</motion.div>
+						)}
+						{token.poolState === 1 && (
+							<motion.div
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.5, delay: 0.1 }}
+								className="bg-gradient-to-b from-[#1D2538]/90 to-[#1D2538] rounded-3xl overflow-hidden border border-[#475B74]/50 shadow-xl backdrop-blur-sm p-6"
+							>
+								<h2 className="text-xl font-bold text-white mb-4">
+									Claiming Period
+								</h2>
 
-								{/* <div className="flex justify-between text-sm">
-									<span className="text-[#97CBDC]">You will receive:</span>
-									<span className="text-white">
-										{contributionAmount &&
-										!isNaN(Number.parseFloat(contributionAmount))
-											? (
-													Number.parseFloat(contributionAmount) * 1000000
-											  ).toLocaleString()
-											: 0}{" "}
-										{token.symbol}
-									</span>
-								</div> */}
+								<div className="space-y-4">
+									{/* <div className="relative">
+										<Input
+											type="number"
+											min="0.1"
+											max="1"
+											disabled={token.status === "COMPLETED"}
+											value={contributionAmount}
+											onChange={(e) => setContributionAmount(e.target.value)}
+											className="bg-[#1D2538]/60 border-[#475B74] text-white h-12 rounded-xl focus:border-[#018ABD] focus:ring-1 focus:ring-[#018ABD] pr-20"
+											placeholder="0"
+										/>
+										<div className="absolute right-1 top-1 flex items-center">
+											<span className="text-[#97CBDC] mr-2">PTT</span>
+											<Button
+												disabled={token.status === "COMPLETED"}
+												onClick={handleMaxContribution}
+												className="bg-gradient-to-r from-[#004581] to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white h-10 rounded-lg"
+											>
+												Max
+											</Button>
+										</div>
+									</div> */}
 
-								<motion.div
-									whileHover={{ scale: 1.03 }}
-									whileTap={{ scale: 0.97 }}
-								>
-									<Button
-										disabled={isContributing}
-										onClick={handleContribute}
-										className="w-full bg-gradient-to-r from-[#004581] to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white rounded-xl h-12 shadow-lg shadow-[#004581]/20 transition-all duration-200 font-medium group"
+									<div className="flex justify-between pt-4">
+										<div className="text-[#97CBDC]">My Contribution</div>
+										<div className="text-white">{myContribution} PTT</div>
+									</div>
+									<div className="flex justify-between pt-4">
+										<div className="text-[#97CBDC]">Eligible to Claim</div>
+										<div className="text-white">
+											{claimableAmount} {token.symbol}
+										</div>
+									</div>
+									<motion.div
+										whileHover={{ scale: 1.03 }}
+										whileTap={{ scale: 0.97 }}
 									>
-										<span>
-											{isContributing ? "Contributing" : "CONTRIBUTE NOW"}
-										</span>
-										<ArrowUpRight className="h-4 w-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-									</Button>
-								</motion.div>
-
-								<div className="flex justify-between pt-4">
-									<div className="text-[#97CBDC]">My Contribution</div>
-									<div className="text-white">{myContribution} PTT</div>
+										<Button
+											disabled={
+												isClaiming || !Number(claimableAmount)
+											}
+											onClick={handleClaim}
+											className="w-full bg-gradient-to-r from-[#004581] to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white rounded-xl h-12 shadow-lg shadow-[#004581]/20 transition-all duration-200 font-medium group"
+										>
+											<span>
+												{!Number(claimableAmount)
+													? "Not Eligible or Claimed"
+													: isClaiming
+													? "Claiming..."
+													: `CLAIM ${claimableAmount} ${token.symbol}`}
+											</span>
+											<ArrowUpRight className="h-4 w-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+										</Button>
+									</motion.div>
 								</div>
-							</div>
-						</motion.div>
+							</motion.div>
+						)}
 
 						{/* Action Buttons */}
 						<div className="space-y-3">
@@ -880,3 +1061,4 @@ export default function FairLaunchViewPage({ params }) {
 		</div>
 	);
 }
+export default React.memo(FairLaunchViewPage);
