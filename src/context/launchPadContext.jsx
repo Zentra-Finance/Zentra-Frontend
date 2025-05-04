@@ -12,11 +12,11 @@ import useEthersProvider from "@/hooks/useEthersProvider";
 import {
 	POOL_MANAGER_ABI,
 	PHAROS_POOL_MANAGER_ADDRESS,
-} from "@/utils/ABI/PoolManager";
+} from "@/utils/ABI/PoolManager/Index";
 
 import { useAccount } from "wagmi";
-import { BONDING_POOL_ABI } from "@/utils/ABI/BondingPool";
-import { FAIR_POOL_ABI } from "@/utils/ABI/FairPool";
+import { BONDING_POOL_ABI } from "@/utils/ABI/BondingPool/Index";
+import { FAIR_POOL_ABI } from "@/utils/ABI/FairPool/Index";
 import axios from "axios";
 const multicall3Addr = "0x3308CC3B0b2fCD4E9994E210A8290649d61360D7";
 const multicallAbi = [

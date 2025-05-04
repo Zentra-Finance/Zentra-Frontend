@@ -12,13 +12,13 @@ import {
   LAUNCH_ABI,
   PAHROS_LAUNCH_CONTRACT_ADDRESS,
   CELO_LAUNCH_CONTRACT_ADDRESS,
-} from "@/utils/ABI/FairLaunch";
+} from "@/utils/ABI/FairLaunch/Index";
 import {
   POOL_FACTORY_ABI,
   PAHROS_POOL_FACTORY_ADDRESS,
   CELO_POOL_FACTORY_ADDRESS,
-} from "@/utils/ABI/PoolFactory";
-import { erc20Abi } from "@/utils/ABI";
+} from "@/utils/ABI/PoolFactory/Index";
+import { erc20Abi } from "@/utils/ABI/Index";
 import { toast } from "react-toastify";
 import { config } from "@/providers/Wagmi";
 

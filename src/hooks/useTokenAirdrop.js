@@ -12,8 +12,8 @@ import {
   AIRDROP_ABI,
   PAHROS_AIRDROP_CONTRACT_ADDRESS,
   CELO_AIRDROP_CONTRACT_ADDRESS,
-} from "@/utils/ABI/Airdrop";
-import { erc20Abi } from "@/utils/ABI";
+} from "@/utils/ABI/Airdrop/Index";
+import { erc20Abi } from "@/utils/ABI/Index";
 import { toast } from "react-toastify";
 import { config } from "@/providers/Wagmi";
 

@@ -3,21 +3,21 @@ import RootLayout from "@/layouts/Layout";
 import { Routes, Route } from "react-router-dom";
 import Staking from "@/pages/Staking/Staking";
 import CreateToken from "@/pages/Tokens/CreateToken";
-import Bonding from "@/pages/Bonding";
+import Bonding from "@/pages/Bonding/Index";
 import Airdrop from "@/pages/Airdrop/Airdrop";
-import TokenLockPage from "@/pages/Lock";
-import LPLockListPage from "@/pages/Lock/LP";
-import TokenLock from "@/pages/Lock/TOKEN";
+import TokenLockPage from "@/pages/Lock/Index";
+import LPLockListPage from "@/pages/Lock/LP/Index";
+import TokenLock from "@/pages/Lock/TOKEN/Index";
 import FairLaunchPage from "@/pages/FairLaunch/FairLaunch";
-import FairLaunchViewPage from "@/pages/FairLaunch/FairLanchView";
-import Launchpad from "@/pages/Launchpad";
-import BondingTrading from "@/pages/Bonding/BondingTrading";
+import FairLaunchViewPage from "@/pages/FairLaunch/FairLanchView/Index";
+import Launchpad from "@/pages/Launchpad/Index";
+import BondingTrading from "@/pages/Bonding/BondingTrading/Index";
 import { BondingPoolContextProvider } from "@/context/bondingPoolContext";
 import { LaunchPadContextProvider } from "@/context/launchPadContext";
 import { FairPoolContextProvider } from "@/context/fairPoolContext";
-import LandingPage from "@/pages/LandingPage";
-import LogoPage from "@/pages/LogoGuide";
-import { PortfolioDashboard } from "@/pages/Portfolio";
+import LandingPage from "@/pages/LandingPage/Index";
+import LogoPage from "@/pages/LogoGuide/Index";
+import { PortfolioDashboard } from "@/pages/Portfolio/Index";
 
 const App = () => {
   return (
