@@ -24,6 +24,7 @@ export const FairPoolContext = createContext({
 	loading: true,
 	setToken: () => {},
 	setParticipants: () => {},
+	owner: null,
 });
 
 export const FairPoolContextProvider = ({ children }) => {
@@ -37,6 +38,15 @@ export const FairPoolContextProvider = ({ children }) => {
 	const [participants, setParticipants] = useState([]);
 	const [token, setToken] = useState({});
 	const [loading, setLoading] = useState(true);
+	const [owner, setOwner] = useState(null);
+
+	const getUniqueContributors = useCallback((participants) => {
+		return [
+			...new Set(
+				participants.map((participant) => participant.id.toLowerCase())
+			),
+		];
+	}, []);
 
 	const contributedHandler = useCallback((contributor, amount, time) => {
 		console.log({ contributor, amount, time });
@@ -53,22 +63,21 @@ export const FairPoolContextProvider = ({ children }) => {
 					time: new Date(Number(time) * 1000).toISOString(),
 				},
 			];
-		
+
 			const uniqueContributors = getUniqueContributors(newParticipants);
 			const totalRaised = newParticipants.reduce(
 				(acc, p) => acc + Number(p.amount),
 				0
 			);
-		
+
 			setToken((prev) => ({
 				...prev,
 				raised: totalRaised.toFixed(3),
 				participants: uniqueContributors.length,
 			}));
-		
+
 			return newParticipants;
 		});
-
 	}, []);
 
 	useEffect(() => {
@@ -99,17 +108,9 @@ export const FairPoolContextProvider = ({ children }) => {
 				},
 			});
 
-			// console.log({ data2: data });
-
 			return parseInt(data.result.blockNumber);
 		}
 		const fetchPoolDetails = async () => {
-			const contract = new Contract(
-				contractAddress,
-				FAIR_POOL_ABI,
-				// readOnlyProvider
-				signer
-			);
 			try {
 				const latestBlock = await getLatestBlock();
 				console.log({ latestBlock });
@@ -129,38 +130,19 @@ export const FairPoolContextProvider = ({ children }) => {
 				console.log({ data });
 
 				const participants = [];
-				// for (const event of events) {
-				// 	const { contributor, amount, timestamp } = event.args;
-				// 	participants.push({
-				// 		id: contributor,
-				// 		contributor: contributor, // optional: normalize
-				// 		amount,
-				// 		timestamp,
-				// 	});
-				// }
+
 				if (data.status === "1") {
-					const iface = new ethers.Interface([
-						"event Contributed(address indexed contributor, uint256 amount, uint256 timestamp)",
-					]);
-
-					// console.log({ dataResult: data.result });
-
 					const abiCoder = new ethers.AbiCoder();
 
 					for (const log of data.result) {
-						// console.log(log.topics);
-						// try {
-						// decode non-indexed args: amount (uint256), timestamp (uint256)
 						const [amount, timestamp] = abiCoder.decode(
 							["uint256", "uint256"],
 							log.data
 						);
 
-						// decode indexed contributor from topics[1]
 						const contributor = ethers.getAddress(
 							"0x" + log.topics[1].slice(26)
-						); // last 40 hex chars
-						// console.log({contributor})
+						);
 						const time = new Date(Number(timestamp) * 1000).toISOString();
 
 						participants.push({
@@ -169,22 +151,10 @@ export const FairPoolContextProvider = ({ children }) => {
 							amount: Number(formatEther(amount)).toFixed(3),
 							time,
 						});
-						// } catch (err) {
-						// 	console.error("Manual decode failed:", err);
-						// }
 					}
 				}
 				// console.log({ participants });
 				setParticipants(participants);
-
-				// setEventData({ contributors, amounts, timestamps });
-				// console.log("Fetched contributed events:", {
-				// 	participants,
-				// });
-				// 	} catch (err) {
-				// 		console.error("Error fetching contributed events:", err);
-				// 	}
-				// };
 
 				const multicallContract = new Contract(
 					multicall3Addr,
@@ -201,6 +171,7 @@ export const FairPoolContextProvider = ({ children }) => {
 					{ address: contractAddress, method: "refundType" },
 					{ address: contractAddress, method: "totalToken" },
 					{ address: contractAddress, method: "liquidityLockDays" },
+					{ address: contractAddress, method: "governance" },
 				];
 				const fairPoolItfCalls = allFairPools.map((fairPool) => ({
 					target: fairPool.address,
@@ -224,6 +195,12 @@ export const FairPoolContextProvider = ({ children }) => {
 					"liquidityLockDays",
 					allFairPoolsResponses[2].returnData
 				);
+				const deCodedGovernance = fairPoolItf.decodeFunctionResult(
+					"governance",
+					allFairPoolsResponses[3].returnData
+				);
+				console.log({ deCodedGovernance });
+				setOwner(deCodedGovernance.toString());
 
 				// console.log({
 				// 	deCodedRefundType,
@@ -301,6 +278,7 @@ export const FairPoolContextProvider = ({ children }) => {
 					raised: formatEther(Number(poolInfo[3][2]).toString()),
 					participants: uniqueContributors.length,
 					status: status,
+					poolState: Number(poolInfo[2][0]),
 					socialLinks: {
 						website: "https://example.com",
 						twitter: "https://twitter.com",
@@ -309,6 +287,7 @@ export const FairPoolContextProvider = ({ children }) => {
 						github: "https://github.com",
 					},
 				};
+				console.log("Pool State ", Number(poolInfo[2][0]));
 				// console.log({ fullTokenSaleDetails });
 				setToken(fullTokenSaleDetails);
 			} catch (error) {
@@ -323,13 +302,6 @@ export const FairPoolContextProvider = ({ children }) => {
 	}, [readOnlyProvider, contractAddress]);
 
 	// console.log("Loading");
-	function getUniqueContributors(participants) {
-		return [
-			...new Set(
-				participants.map((participant) => participant.id.toLowerCase())
-			),
-		];
-	}
 
 	console.log({ token });
 	return (
@@ -340,6 +312,7 @@ export const FairPoolContextProvider = ({ children }) => {
 				loading,
 				setToken,
 				setParticipants,
+				owner,
 			}}
 		>
 			{children}

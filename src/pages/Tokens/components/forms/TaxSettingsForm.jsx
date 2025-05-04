@@ -49,7 +49,7 @@ export default function TaxSettingsForm({
             value={formState.buyTax}
             onChange={handleInputChange}
             placeholder="0"
-            className="bg-[#1D2538]/70 border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-orange-500 transition-all duration-200"
+            className="bg-[#1D2538]/70 text-white border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-orange-500 transition-all duration-200"
           />
         </div>
         <div>
@@ -78,7 +78,7 @@ export default function TaxSettingsForm({
             value={formState.sellTax}
             onChange={handleInputChange}
             placeholder="0"
-            className="bg-[#1D2538]/70 border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-orange-500 transition-all duration-200"
+            className="bg-[#1D2538]/70 text-white border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-orange-500 transition-all duration-200"
           />
         </div>
       </div>
@@ -116,7 +116,7 @@ export default function TaxSettingsForm({
           onChange={handleInputChange}
           placeholder="Eg: 0x1234..."
           className={cn(
-            "bg-[#1D2538]/70 border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-orange-500 transition-all duration-200",
+            "bg-[#1D2538]/70 text-white border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-orange-500 transition-all duration-200",
             errors.taxReceiver && "border-red-500 focus:border-red-500"
           )}
         />
