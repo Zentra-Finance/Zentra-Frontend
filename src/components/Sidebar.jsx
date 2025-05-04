@@ -19,17 +19,19 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ConnectWallet from "./ui/ConnectButton";
+import { Link } from "react-router-dom";
+import { ZentraLogo } from "./ZentraLogo";
 
 // Navigation items with icons
 const viewItems = [
-  { id: "launchpad", name: "Launchpad", href: "/", icon: Rocket },
-  { id: "defi", name: "$DEFI 🔥", href: "/defi", icon: BarChart3 },
+  { id: "launchpad", name: "Launchpad", href: "/launchpad", icon: Rocket },
+  // { id: "defi", name: "$ZTR 🔥", href: "/defi", icon: BarChart3 },
   { id: "staking", name: "Staking", href: "/staking", icon: Coins },
   { id: "portfolio", name: "Portfolio", href: "/portfolio", icon: Wallet },
 ];
 
 const createItems = [
-  { id: "meme-coin", name: "Meme Coin 🔥", href: "/token", icon: Coins },
+  { id: "meme-coin", name: "Create Token", href: "/token", icon: Coins },
   { id: "fair-launch", name: "Fair Launch", href: "/fair-launch", icon: Users },
   {
     id: "pump-launch",
@@ -48,20 +50,6 @@ const createItems = [
 
 const helpItems = [{ id: "help", name: "HELP", href: "#", icon: HelpCircle }];
 
-// ZentraLogo component
-function ZentraLogo() {
-  return (
-    <div className="flex items-center">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#018ABD] to-[#97CBDC]">
-        <Zap className="h-5 w-5 text-white" />
-      </div>
-      <span className="ml-2 text-xl font-bold tracking-tight text-white">
-        Zentra
-      </span>
-    </div>
-  );
-}
-
 // Header component
 function Header() {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
@@ -70,7 +58,7 @@ function Header() {
     <header className="sticky top-0 z-50 border-b border-[#97CBDC]/30 bg-[#004581] bg-opacity-95 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
         <div className="flex justify-between space-x-6">
-          <ZentraLogo />
+          <ZentraLogo showTagline={false} size="xs" />
 
           <nav className="hidden md:block">
             <ul className="flex space-x-1">
@@ -100,7 +88,7 @@ function Header() {
 
           <button className="hidden p-2 text-center rounded-lg bg-gradient-to-r from-[#018ABD] to-[#97CBDC] text-sm font-medium text-white hover:opacity-90 md:flex">
             <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-            BUY $DEFI
+            BUY $ZTR
           </button>
 
           <ConnectWallet />
@@ -142,7 +130,7 @@ function Header() {
             </div>
             <button className="mt-3 w-full rounded-lg bg-gradient-to-r from-[#018ABD] to-[#97CBDC] py-2 text-sm font-medium text-white hover:opacity-90">
               <Sparkles className="mr-1.5 h-4 w-4" />
-              BUY $DEFI
+              BUY $ZTR
             </button>
           </nav>
         </div>
@@ -236,9 +224,9 @@ export function ZentraSidebar({ collapsed, setCollapsed }) {
           </div>
           <div className="space-y-1">
             {viewItems.map((item) => (
-              <a
+              <Link
                 key={item.id}
-                href={item.href}
+                to={item.href}
                 onClick={(e) => handleNavigation(e, item)}
                 className={cn(
                   "block w-full rounded-lg text-sm font-medium transition-all",
@@ -256,7 +244,7 @@ export function ZentraSidebar({ collapsed, setCollapsed }) {
                 {!collapsed && (
                   <span className="ml-3 transition-all">{item.name}</span>
                 )}
-              </a>
+              </Link>
             ))}
           </div>
         </div>
@@ -272,9 +260,9 @@ export function ZentraSidebar({ collapsed, setCollapsed }) {
           <div className="space-y-1">
             {createItems.map((item) =>
               item.icon ? (
-                <a
+                <Link
                   key={item.id}
-                  href={item.href}
+                  to={item.href}
                   onClick={(e) => handleNavigation(e, item)}
                   className={cn(
                     "block w-full rounded-lg text-sm font-medium transition-all",
@@ -299,7 +287,7 @@ export function ZentraSidebar({ collapsed, setCollapsed }) {
                   {!collapsed && (
                     <span className="ml-3 transition-all">{item.name}</span>
                   )}
-                </a>
+                </Link>
               ) : (
                 !collapsed && (
                   <a
@@ -362,7 +350,7 @@ export function ZentraSidebar({ collapsed, setCollapsed }) {
               Boost your token launch
             </p>
             <button className="w-full py-2 px-4 bg-gradient-to-r from-[#018ABD] to-[#97CBDC] text-white rounded-lg text-sm font-medium hover:opacity-90">
-              Buy $DEFI
+              Buy $ZTR
             </button>
           </div>
         )}

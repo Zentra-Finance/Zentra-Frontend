@@ -74,8 +74,13 @@ export default function TokenLockForm() {
   }, [tokenAddress]);
 
   // Get token info using our custom hook
-  const { tokenInfo, isLoadingToken, tokenError, fetchTokenInfo, setTokenInfo } =
-    useTokenInfo(debouncedTokenAddress, address);
+  const {
+    tokenInfo,
+    isLoadingToken,
+    tokenError,
+    fetchTokenInfo,
+    setTokenInfo,
+  } = useTokenInfo(debouncedTokenAddress, address);
 
   // Fetch token info when debounced address changes
   useEffect(() => {
@@ -160,7 +165,7 @@ export default function TokenLockForm() {
         null // No vesting options for now
       );
 
-      if (result.success) {
+      if (result.success === true) {
         // Save successful lock data for the modal
         setSuccessData({
           tokenAddress,
@@ -731,7 +736,7 @@ export default function TokenLockForm() {
                         Total Supply:
                       </div>
                       <div className="text-[#97CBDC] font-medium">
-                        {tokenInfo.totalSupply}
+                        {Number(tokenInfo.totalSupply).toLocaleString()}
                       </div>
                     </div>
                   </div>

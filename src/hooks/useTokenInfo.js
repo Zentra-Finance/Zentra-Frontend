@@ -53,7 +53,7 @@ export function useTokenInfo(tokenAddress, userAddress) {
   const fetchTokenInfo = useCallback(() => {
     if (!isValidAddress) {
       setTokenInfo(null);
-      setTokenError(null);
+      setTokenError("Invalid token address");
       setIsLoadingToken(false);
       return;
     }
@@ -68,8 +68,10 @@ export function useTokenInfo(tokenAddress, userAddress) {
     if (!shouldFetch || !isValidAddress) return;
 
     const allLoaded =
-      (!name.isLoading && !symbol.isLoading && !decimals.isLoading) ||
-      totalSupply.isLoading;
+      !name.isLoading &&
+      !symbol.isLoading &&
+      !decimals.isLoading &&
+      !totalSupply.isLoading;
     const hasError =
       name.error || symbol.error || decimals.error || totalSupply.error;
 
@@ -79,6 +81,7 @@ export function useTokenInfo(tokenAddress, userAddress) {
       );
       setTokenInfo(null);
       setIsLoadingToken(false);
+      setShouldFetch(false);
       return;
     }
 
@@ -89,6 +92,7 @@ export function useTokenInfo(tokenAddress, userAddress) {
         if (balance.data && decimals.data) {
           formattedBalance = formatUnits(balance.data, decimals.data);
         }
+
         setTokenInfo({
           name: name.data,
           symbol: symbol.data,
@@ -96,14 +100,15 @@ export function useTokenInfo(tokenAddress, userAddress) {
           balance: formattedBalance,
           totalSupply: totalSupply.data,
         });
-        console.log(tokenInfo);
 
         setIsLoadingToken(false);
+        // Don't reset shouldFetch here, as we want to keep the data available
       } catch (error) {
         console.error("Error processing token data:", error);
         setTokenError("Error processing token data");
         setTokenInfo(null);
         setIsLoadingToken(false);
+        setShouldFetch(false);
       }
     }
   }, [
@@ -120,14 +125,21 @@ export function useTokenInfo(tokenAddress, userAddress) {
     decimals.error,
     balance.data,
     totalSupply.data,
+    totalSupply.isLoading,
     totalSupply.error,
   ]);
+
+  // Reset token info when address changes
+  useEffect(() => {
+    if (!shouldFetch) {
+      setTokenInfo(null);
+    }
+  }, [tokenAddress, shouldFetch]);
 
   return {
     tokenInfo,
     isLoadingToken,
     tokenError,
-    setTokenInfo,
     fetchTokenInfo,
   };
 }

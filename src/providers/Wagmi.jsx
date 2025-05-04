@@ -25,7 +25,7 @@ const pharosDevnet = defineChain({
   },
   rpcUrls: {
     default: {
-      http: ["https://devnet.dplabs-internal.com"],
+      http: [import.meta.env.VITE_SERVER_RPC_URL],
       webSocket: ["wss://devnet.dplabs-internal.com"],
     },
   },
@@ -101,7 +101,6 @@ export const WagmiConfigProvider = ({ children }) => {
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
           initialChain={pharosDevnet?.id}
-          coolMode
           showRecentTransactions={true}
           modalSize="compact"
           theme={darkTheme({

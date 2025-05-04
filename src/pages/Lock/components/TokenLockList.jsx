@@ -7,7 +7,6 @@ import {
   Unlock,
   ExternalLink,
   Search,
-  Filter,
   ChevronDown,
   Clock,
   Calendar,
@@ -18,9 +17,11 @@ import {
   Percent,
   RefreshCw,
   Eye,
-  ArrowUpDown,
   CheckCircle,
   Shield,
+  ListFilter,
+  LayoutGrid,
+  LayoutList,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { config } from "@/providers/wagmi";
@@ -31,11 +32,86 @@ import { readContract } from "@wagmi/core";
 import { useTokenLock } from "@/hooks/useTokenLock";
 import { toast } from "react-toastify";
 
+// Loading skeleton components
+const TokenLockCardSkeleton = () => (
+  <div className="bg-[#0a0a20]/60 backdrop-blur-sm border border-[#475B74]/30 rounded-xl overflow-hidden animate-pulse">
+    <div className="p-4 border-b border-[#475B74]/30 flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-[#1D2538]/70"></div>
+        <div>
+          <div className="h-4 w-20 bg-[#1D2538]/70 rounded mb-2"></div>
+          <div className="h-3 w-16 bg-[#1D2538]/70 rounded"></div>
+        </div>
+      </div>
+      <div className="h-6 w-20 bg-[#1D2538]/70 rounded-full"></div>
+    </div>
+    <div className="p-4">
+      <div className="mb-4">
+        <div className="h-3 w-16 bg-[#1D2538]/70 rounded mb-2"></div>
+        <div className="h-6 w-24 bg-[#1D2538]/70 rounded"></div>
+      </div>
+      <div className="mb-4">
+        <div className="h-3 w-24 bg-[#1D2538]/70 rounded mb-2"></div>
+        <div className="h-2 bg-[#1D2538]/70 rounded-full"></div>
+        <div className="h-3 w-32 bg-[#1D2538]/70 rounded mt-2"></div>
+      </div>
+      <div className="mt-4">
+        <div className="h-10 bg-[#1D2538]/70 rounded-lg"></div>
+      </div>
+    </div>
+  </div>
+);
+
+const TokenLockListItemSkeleton = () => (
+  <tr className="border-b border-[#475B74]/30 animate-pulse">
+    <td className="px-4 py-4">
+      <div className="flex items-center">
+        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[#1D2538]/70"></div>
+        <div className="ml-3">
+          <div className="h-4 w-20 bg-[#1D2538]/70 rounded mb-2"></div>
+          <div className="h-3 w-16 bg-[#1D2538]/70 rounded"></div>
+        </div>
+      </div>
+    </td>
+    <td className="px-4 py-4">
+      <div className="h-4 w-16 bg-[#1D2538]/70 rounded mb-2"></div>
+      <div className="h-3 w-24 bg-[#1D2538]/70 rounded"></div>
+    </td>
+    <td className="px-4 py-4 hidden md:table-cell">
+      <div className="h-4 w-32 bg-[#1D2538]/70 rounded mb-2"></div>
+      <div className="h-3 w-24 bg-[#1D2538]/70 rounded"></div>
+    </td>
+    <td className="px-4 py-4 text-right">
+      <div className="h-8 w-20 bg-[#1D2538]/70 rounded-xl ml-auto"></div>
+    </td>
+  </tr>
+);
+
+// Empty state component
+const EmptyState = ({ searchTerm, type }) => (
+  <div className="flex flex-col items-center justify-center py-16">
+    <div className="w-16 h-16 rounded-full bg-gradient-to-r from-[#004581]/20 to-[#018ABD]/20 flex items-center justify-center mb-4">
+      <LockClosed className="w-8 h-8 text-[#97CBDC]/50" />
+    </div>
+    <p className="text-[#97CBDC] mb-2 text-lg font-medium">No locks found</p>
+    <p className="text-sm text-[#97CBDC]/70 max-w-md text-center">
+      {searchTerm
+        ? "Try a different search term or clear the filters"
+        : `Create your first ${
+            type === "lp" ? "LP" : "token"
+          } lock to secure your tokens`}
+    </p>
+    <button className="mt-6 px-6 py-2.5 bg-gradient-to-r from-[#004581] to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white rounded-xl transition-colors font-medium shadow-lg shadow-[#004581]/20">
+      Create Lock
+    </button>
+  </div>
+);
+
 export default function TokenLockList({ type = "token" }) {
   const { address, chain } = useAccount();
   const chainId = useChainId();
   const [activeTab, setActiveTab] = useState("all");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [locks, setLocks] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
@@ -48,7 +124,7 @@ export default function TokenLockList({ type = "token" }) {
   const [tokenInfoCache, setTokenInfoCache] = useState({});
   const [withdrawableAmounts, setWithdrawableAmounts] = useState({});
   const [refreshing, setRefreshing] = useState(false);
-  const [viewMode, setViewMode] = useState("grid"); // "grid" or "table"
+  const [viewMode, setViewMode] = useState("grid"); // "grid" or "list"
   const [failedTokenAddresses, setFailedTokenAddresses] = useState(new Set());
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(null);
@@ -589,7 +665,7 @@ export default function TokenLockList({ type = "token" }) {
   // Format number with friendly abbreviations (k, M, G, T, P, E)
   const abbreviateNumber = (number, decimals = 2) => {
     if (isNaN(number)) {
-      return NaN;
+      return Number.NaN;
     }
 
     const abbreviations = ["", "K", "M", "B", "T"];
@@ -600,7 +676,9 @@ export default function TokenLockList({ type = "token" }) {
       index++;
     }
 
-    return `${Number(number.toFixed(decimals)).toLocaleString()}${abbreviations[index]}`;
+    return `${Number(number.toFixed(decimals)).toLocaleString()}${
+      abbreviations[index]
+    }`;
   };
 
   // Format token amount for display
@@ -608,7 +686,7 @@ export default function TokenLockList({ type = "token" }) {
     if (!lock) return "0";
 
     // If we have a formatted amount, use it
-    if (lock.amount && !lock.hasError) {
+    if (lock.formattedAmount && !lock.hasError) {
       const numericAmount = Number(lock.amount);
       return abbreviateNumber(numericAmount);
     }
@@ -616,9 +694,9 @@ export default function TokenLockList({ type = "token" }) {
     // Otherwise, try to format the raw amount
     try {
       // If we have tokenDecimals, use them
-      if (lock.tokenDecimal) {
+      if (lock.tokenDecimals) {
         const formattedValue = Number(
-          formatUnits(lock.amount, lock.tokenDecimal)
+          formatUnits(lock.amount, lock.tokenDecimals)
         );
         return abbreviateNumber(formattedValue);
       }
@@ -632,42 +710,50 @@ export default function TokenLockList({ type = "token" }) {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
-      <motion.h1
-        className="text-2xl font-bold text-[#97CBDC] text-center mb-6"
+    <div className="w-full max-w-6xl mx-auto">
+      <motion.div
+        className="text-center mb-8"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        {type === "lp" ? "Locked LP Token List" : "Locked Token List"}
-      </motion.h1>
+        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#97CBDC] to-[#018ABD]">
+          {type === "lp" ? "LP Token Locks" : "Token Locks"}
+        </h1>
+        <p className="text-[#97CBDC]/70 mt-2">
+          Manage your {type === "lp" ? "liquidity pool" : "token"} locks and
+          vesting schedules
+        </p>
+      </motion.div>
 
       {/* Tabs */}
-      <div className="flex justify-center mb-6 space-x-4">
-        <motion.button
-          className={`px-6 py-2 cursor-pointer rounded-xl transition-all duration-200 ${
-            activeTab === "all"
-              ? "bg-gradient-to-r from-[#004581] to-[#018ABD] text-white shadow-lg shadow-[#004581]/20"
-              : "bg-[#0a0a20]/80 border border-[#475B74]/50 text-[#97CBDC]/70 hover:text-[#97CBDC]"
-          }`}
-          onClick={() => setActiveTab("all")}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          {type === "lp" ? "All LP Locks" : "All Token Locks"}
-        </motion.button>
-        <motion.button
-          className={`px-6 py-2 cursor-pointer rounded-xl transition-all duration-200 ${
-            activeTab === "my"
-              ? "bg-gradient-to-r from-[#004581] to-[#018ABD] text-white shadow-lg shadow-[#004581]/20"
-              : "bg-[#0a0a20]/80 border border-[#475B74]/50 text-[#97CBDC]/70 hover:text-[#97CBDC]"
-          }`}
-          onClick={() => setActiveTab("my")}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          {type === "lp" ? "My LP Locks" : "My Token Locks"}
-        </motion.button>
+      <div className="flex justify-center mb-6">
+        <div className="bg-[#0a0a20]/40 backdrop-blur-sm p-1 rounded-xl border border-[#475B74]/30 flex">
+          <motion.button
+            className={`px-6 py-2.5 rounded-lg transition-all duration-200 ${
+              activeTab === "all"
+                ? "bg-gradient-to-r from-[#004581] to-[#018ABD] text-white shadow-lg"
+                : "text-[#97CBDC]/70 hover:text-[#97CBDC] hover:bg-[#1D2538]/30"
+            }`}
+            onClick={() => setActiveTab("all")}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            {type === "lp" ? "All LP Locks" : "All Token Locks"}
+          </motion.button>
+          <motion.button
+            className={`px-6 py-2.5 rounded-lg transition-all duration-200 ${
+              activeTab === "my"
+                ? "bg-gradient-to-r from-[#004581] to-[#018ABD] text-white shadow-lg"
+                : "text-[#97CBDC]/70 hover:text-[#97CBDC] hover:bg-[#1D2538]/30"
+            }`}
+            onClick={() => setActiveTab("my")}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            {type === "lp" ? "My LP Locks" : "My Token Locks"}
+          </motion.button>
+        </div>
       </div>
 
       {/* Search and Filter */}
@@ -684,7 +770,7 @@ export default function TokenLockList({ type = "token" }) {
             placeholder="Search by token name, symbol or address..."
             value={searchTerm}
             onChange={handleSearch}
-            className="w-full bg-[#0a0a20]/80 border border-[#475B74]/50 rounded-xl py-2 pl-10 pr-4 text-[#97CBDC] placeholder:text-[#97CBDC]/50 focus:outline-none focus:ring-2 focus:ring-[#018ABD]/50"
+            className="w-full bg-[#0a0a20]/40 backdrop-blur-sm border border-[#475B74]/30 rounded-xl py-3 pl-10 pr-4 text-[#97CBDC] placeholder:text-[#97CBDC]/50 focus:outline-none focus:ring-2 focus:ring-[#018ABD]/50"
           />
           {searchTerm && (
             <button
@@ -700,104 +786,46 @@ export default function TokenLockList({ type = "token" }) {
           <motion.button
             onClick={handleRefresh}
             disabled={refreshing || isLoading}
-            className="flex items-center cursor-pointer gap-1 px-3 py-2 bg-[#0a0a20]/80 border border-[#475B74]/50 rounded-xl text-[#97CBDC] hover:bg-[#0a0a20] transition-colors disabled:opacity-50"
+            className="flex items-center cursor-pointer gap-1 px-3 py-2 bg-[#0a0a20]/40 backdrop-blur-sm border border-[#475B74]/30 rounded-xl text-[#97CBDC] hover:text-white transition-colors disabled:opacity-50"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
             <RefreshCw
-              className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
+              className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`}
             />
           </motion.button>
 
-          <div className="flex rounded-xl overflow-hidden border border-[#475B74]/50">
+          <div className="flex rounded-xl overflow-hidden border border-[#475B74]/30">
             <button
               onClick={() => setViewMode("grid")}
-              className={`flex cursor-pointer items-center justify-center w-10 ${
+              className={`flex cursor-pointer items-center justify-center w-10 h-10 ${
                 viewMode === "grid"
                   ? "bg-[#018ABD]/20 text-[#97CBDC]"
-                  : "bg-[#0a0a20]/80 text-[#97CBDC]/70"
+                  : "bg-[#0a0a20]/40 text-[#97CBDC]/50"
               }`}
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <rect
-                  x="3"
-                  y="3"
-                  width="7"
-                  height="7"
-                  rx="1"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-                <rect
-                  x="14"
-                  y="3"
-                  width="7"
-                  height="7"
-                  rx="1"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-                <rect
-                  x="3"
-                  y="14"
-                  width="7"
-                  height="7"
-                  rx="1"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-                <rect
-                  x="14"
-                  y="14"
-                  width="7"
-                  height="7"
-                  rx="1"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-              </svg>
+              <LayoutGrid className="w-5 h-5" />
             </button>
             <button
-              onClick={() => setViewMode("table")}
-              className={`flex cursor-pointer items-center justify-center w-10 ${
-                viewMode === "table"
+              onClick={() => setViewMode("list")}
+              className={`flex cursor-pointer items-center justify-center w-10 h-10 ${
+                viewMode === "list"
                   ? "bg-[#018ABD]/20 text-[#97CBDC]"
-                  : "bg-[#0a0a20]/80 text-[#97CBDC]/70"
+                  : "bg-[#0a0a20]/40 text-[#97CBDC]/50"
               }`}
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M3 5C3 3.89543 3.89543 3 5 3H19C20.1046 3 21 3.89543 21 5V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V5Z"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-                <path d="M3 9H21" stroke="currentColor" strokeWidth="2" />
-                <path d="M3 15H21" stroke="currentColor" strokeWidth="2" />
-                <path d="M9 9V21" stroke="currentColor" strokeWidth="2" />
-              </svg>
+              <LayoutList className="w-5 h-5" />
             </button>
           </div>
 
           <div className="relative">
             <motion.button
               onClick={() => setFilterOpen(!filterOpen)}
-              className="flex cursor-pointer items-center gap-2 px-4 py-2 bg-[#0a0a20]/80 border border-[#475B74]/50 rounded-xl text-[#97CBDC] hover:bg-[#0a0a20] transition-colors"
+              className="flex cursor-pointer items-center gap-2 px-4 py-2 bg-[#0a0a20]/40 backdrop-blur-sm border border-[#475B74]/30 rounded-xl text-[#97CBDC] hover:text-white transition-colors"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <Filter className="w-5 h-5" />
+              <ListFilter className="w-5 h-5" />
               <span>Filter & Sort</span>
               <ChevronDown
                 className={`w-4 h-4 transition-transform ${
@@ -809,7 +837,7 @@ export default function TokenLockList({ type = "token" }) {
             <AnimatePresence>
               {filterOpen && (
                 <motion.div
-                  className="absolute right-0 z-10 mt-2 w-64 p-4 bg-[#0a0a20] border border-[#475B74]/50 rounded-xl shadow-lg backdrop-blur-sm"
+                  className="absolute right-0 z-10 mt-2 w-64 p-4 bg-[#0a0a20]/90 backdrop-blur-sm border border-[#475B74]/30 rounded-xl shadow-lg"
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
@@ -822,7 +850,7 @@ export default function TokenLockList({ type = "token" }) {
                       <select
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value)}
-                        className="w-full bg-[#1D2538] border border-[#475B74]/50 rounded-lg p-2 text-[#97CBDC] focus:outline-none focus:ring-2 focus:ring-[#018ABD]/50"
+                        className="w-full bg-[#1D2538]/60 border border-[#475B74]/30 rounded-lg p-2 text-[#97CBDC] focus:outline-none focus:ring-2 focus:ring-[#018ABD]/50"
                       >
                         <option value="newest">Newest First</option>
                         <option value="oldest">Oldest First</option>
@@ -897,16 +925,24 @@ export default function TokenLockList({ type = "token" }) {
       {/* Lock List - Grid View */}
       {viewMode === "grid" && (
         <motion.div
-          className="rounded-3xl border border-[#475B74]/50 bg-gradient-to-b from-[#1D2538]/90 to-[#1D2538] backdrop-blur-sm overflow-hidden shadow-lg p-6"
+          className="rounded-2xl border border-[#475B74]/30 bg-gradient-to-b from-[#1D2538]/90 to-[#1D2538]/70 backdrop-blur-sm overflow-hidden shadow-lg p-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
         >
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <div className="w-12 h-12 border-2 border-[#018ABD] border-t-transparent rounded-full animate-spin mb-4"></div>
-              <p className="text-[#97CBDC]/70">Loading locks...</p>
-            </div>
+            <motion.div
+              variants={container}
+              initial="hidden"
+              animate="show"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+            >
+              {[...Array(6)].map((_, index) => (
+                <motion.div key={index} variants={item}>
+                  <TokenLockCardSkeleton />
+                </motion.div>
+              ))}
+            </motion.div>
           ) : filteredLocks.length > 0 ? (
             <motion.div
               variants={container}
@@ -1080,239 +1116,186 @@ export default function TokenLockList({ type = "token" }) {
               ))}
             </motion.div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-16">
-              <div className="w-16 h-16 rounded-full bg-[#0a0a20]/80 border border-[#475B74]/50 flex items-center justify-center mb-4">
-                <LockClosed className="w-8 h-8 text-[#97CBDC]/50" />
-              </div>
-              <p className="text-[#97CBDC]/70 mb-2 text-lg">No locks found</p>
-              <p className="text-sm text-[#97CBDC]/50 max-w-md text-center">
-                {searchTerm
-                  ? "Try a different search term or clear the filters"
-                  : "Create your first token lock to secure your tokens"}
-              </p>
-            </div>
+            <EmptyState searchTerm={searchTerm} type={type} />
           )}
         </motion.div>
       )}
 
-      {/* Lock List - Table View */}
-      {viewMode === "table" && (
+      {/* Lock List - List View */}
+      {viewMode === "list" && (
         <motion.div
-          className="rounded-3xl border border-[#475B74]/50 bg-gradient-to-b from-[#1D2538]/90 to-[#1D2538] backdrop-blur-sm overflow-hidden shadow-lg"
+          className="rounded-2xl border border-[#475B74]/30 bg-gradient-to-b from-[#1D2538]/90 to-[#1D2538]/70 backdrop-blur-sm overflow-hidden shadow-lg"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
         >
-          <div className="overflow-x-auto">
-            <table className="w-full table-fixed">
-              <thead>
-                <tr className="border-b border-[#475B74]/50">
-                  <th className="px-4 py-3 text-left text-sm font-medium text-[#97CBDC]/70 w-[40%]">
-                    <div
-                      className="flex items-center gap-1 cursor-pointer"
-                      onClick={() => setSortBy("newest")}
-                    >
-                      Token
-                      <ArrowUpDown className="w-3 h-3" />
-                    </div>
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-[#97CBDC]/70 w-[20%]">
-                    <div
-                      className="flex items-center gap-1 cursor-pointer"
-                      onClick={() => setSortBy("amountHighest")}
-                    >
-                      Amount
-                      <ArrowUpDown className="w-3 h-3" />
-                    </div>
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-[#97CBDC]/70 hidden md:table-cell w-[25%]">
-                    <div
-                      className="flex items-center gap-1 cursor-pointer"
-                      onClick={() => setSortBy("unlockSoonest")}
-                    >
-                      Unlock Date
-                      <ArrowUpDown className="w-3 h-3" />
-                    </div>
-                  </th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-[#97CBDC]/70 w-[15%]">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-4 py-16 text-center text-[#97CBDC]/70"
-                    >
-                      <div className="flex flex-col items-center justify-center">
-                        <div className="w-8 h-8 border-2 border-[#018ABD] border-t-transparent rounded-full animate-spin mb-2"></div>
-                        <p>Loading locks...</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : filteredLocks.length > 0 ? (
-                  <motion.tbody
-                    variants={container}
-                    initial="hidden"
-                    animate="show"
+          <div className="p-4">
+            {isLoading ? (
+              <div className="space-y-4">
+                {[...Array(6)].map((_, index) => (
+                  <div
+                    key={index}
+                    className="bg-[#0a0a20]/60 backdrop-blur-sm border border-[#475B74]/30 rounded-xl p-4 animate-pulse"
                   >
-                    {filteredLocks.map((lock) => (
-                      <motion.tr
-                        key={lock.id.toString()}
-                        className="border-b border-[#475B74]/30 hover:bg-[#0a0a20]/30 transition-colors cursor-pointer"
-                        variants={item}
-                        onClick={() => viewLockDetails(lock)}
-                      >
-                        <td className="px-4 py-4">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-r from-[#004581]/20 to-[#018ABD]/20 flex items-center justify-center">
-                              <span className="text-xs font-medium text-[#97CBDC]">
-                                {lock.tokenSymbol?.slice(0, 2) || "??"}
-                              </span>
-                            </div>
-                            <div className="ml-3">
-                              <div className="flex items-center">
-                                <p className="text-sm font-medium text-[#97CBDC]">
-                                  {lock.tokenSymbol || "???"}
-                                </p>
-                                {lock.isVesting && (
-                                  <span className="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-[#018ABD]/20 text-[#018ABD]">
-                                    Vesting
-                                  </span>
-                                )}
-                              </div>
-                              <a
-                                href={`${getExplorerUrl()}/token/${lock.token}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-[#018ABD] hover:text-[#97CBDC] flex items-center"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {formatAddress(lock.token)}
-                                <ExternalLink className="w-3 h-3 ml-1" />
-                              </a>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4">
-                          <div>
-                            <p className="text-sm font-medium text-[#97CBDC]">
-                              {formatTokenAmount(lock)}
-                            </p>
-                            {lock.isVesting &&
-                            Number(lock.withdrawableAmount) > 0 ? (
-                              <p className="text-xs text-green-400">
-                                {Number(lock.withdrawableAmount).toLocaleString(
-                                  undefined,
-                                  {
-                                    maximumFractionDigits: 4,
-                                  }
-                                )}
-                                available
-                              </p>
-                            ) : (
-                              <p className="text-xs text-[#97CBDC]/70">
-                                {lock.isUnlockable ? (
-                                  <span className="text-green-400">
-                                    {lock.isVesting
-                                      ? "Tokens available"
-                                      : "Unlockable now"}
-                                  </span>
-                                ) : (
-                                  getTimeRemaining(lock.lockUntil)
-                                )}
-                              </p>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 hidden md:table-cell">
-                          <div>
-                            <p className="text-sm font-medium text-[#97CBDC]">
-                              {formatDate(lock.lockUntil)}
-                            </p>
-                            <p className="text-xs text-[#97CBDC]/70">
-                              Created
-                              {formatDistanceToNow(lock.createdAt, {
-                                addSuffix: true,
-                              })}
-                            </p>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 text-right">
-                          <motion.button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (lock.isUnlockable) {
-                                handleUnlock(lock.id);
-                              }
-                            }}
-                            disabled={
-                              !lock.isUnlockable ||
-                              unlockingId === lock.id ||
-                              isProcessing
-                            }
-                            className={`px-3 cursor-pointer py-1.5 h-8 text-xs font-medium rounded-xl flex items-center ml-auto ${
-                              lock.isUnlockable &&
-                              unlockingId !== lock.id &&
-                              !isProcessing
-                                ? "bg-gradient-to-r from-[#004581] to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white shadow-lg shadow-[#004581]/20"
-                                : "bg-[#0a0a20]/80 border border-[#475B74]/50 text-[#97CBDC]/50"
-                            }`}
-                            whileHover={
-                              lock.isUnlockable &&
-                              unlockingId !== lock.id &&
-                              !isProcessing
-                                ? { scale: 1.05 }
-                                : {}
-                            }
-                            whileTap={
-                              lock.isUnlockable &&
-                              unlockingId !== lock.id &&
-                              !isProcessing
-                                ? { scale: 0.95 }
-                                : {}
-                            }
-                          >
-                            {unlockingId === lock.id ? (
-                              <>
-                                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                                Unlocking
-                              </>
-                            ) : (
-                              <>
-                                <Unlock className="w-3 h-3 mr-1" />
-                                {lock.isVesting ? "Claim" : "Unlock"}
-                              </>
-                            )}
-                          </motion.button>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </motion.tbody>
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-4 py-16 text-center text-[#97CBDC]/70"
-                    >
-                      <div className="flex flex-col items-center justify-center">
-                        <div className="w-12 h-12 rounded-full bg-[#0a0a20]/80 border border-[#475B74]/50 flex items-center justify-center mb-2">
-                          <LockClosed className="w-6 h-6 text-[#97CBDC]/50" />
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 rounded-full bg-[#1D2538]/70"></div>
+                        <div className="ml-3">
+                          <div className="h-4 w-20 bg-[#1D2538]/70 rounded mb-2"></div>
+                          <div className="h-3 w-16 bg-[#1D2538]/70 rounded"></div>
                         </div>
-                        <p className="text-[#97CBDC]/70 mb-1">No locks found</p>
-                        <p className="text-xs text-[#97CBDC]/50">
-                          {searchTerm
-                            ? "Try a different search term"
-                            : "Create your first token lock"}
-                        </p>
                       </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-16 bg-[#1D2538]/70 rounded"></div>
+                        <div className="h-8 w-20 bg-[#1D2538]/70 rounded-xl"></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredLocks.length > 0 ? (
+              <motion.div
+                variants={container}
+                initial="hidden"
+                animate="show"
+                className="space-y-3"
+              >
+                {filteredLocks.map((lock) => (
+                  <motion.div
+                    key={lock.id.toString()}
+                    variants={item}
+                    className="bg-[#0a0a20]/60 backdrop-blur-sm border border-[#475B74]/30 rounded-xl p-4 hover:border-[#018ABD]/50 transition-colors cursor-pointer"
+                    onClick={() => viewLockDetails(lock)}
+                    whileHover={{ y: -2, transition: { duration: 0.2 } }}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#004581]/20 to-[#018ABD]/20 flex items-center justify-center">
+                          <span className="text-sm font-medium text-[#97CBDC]">
+                            {lock.tokenSymbol?.slice(0, 2) || "??"}
+                          </span>
+                        </div>
+                        <div className="ml-3">
+                          <div className="flex items-center">
+                            <p className="text-sm font-medium text-[#97CBDC]">
+                              {lock.tokenSymbol || "???"}
+                            </p>
+                            {lock.isVesting && (
+                              <span className="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-[#018ABD]/20 text-[#018ABD]">
+                                Vesting
+                              </span>
+                            )}
+                          </div>
+                          <a
+                            href={`${getExplorerUrl()}/token/${lock.token}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-[#018ABD] hover:text-[#97CBDC] flex items-center"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {formatAddress(lock.token)}
+                            <ExternalLink className="w-3 h-3 ml-1" />
+                          </a>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 ml-13 sm:ml-0">
+                        <div className="flex flex-col">
+                          <span className="text-xs text-[#97CBDC]/70">
+                            Amount
+                          </span>
+                          <span className="text-sm font-medium text-[#97CBDC]">
+                            {formatTokenAmount(lock)}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-col">
+                          <span className="text-xs text-[#97CBDC]/70">
+                            Unlock
+                          </span>
+                          <span className="text-sm text-[#97CBDC]">
+                            {lock.isUnlockable ? (
+                              <span className="text-green-400">
+                                {lock.isVesting ? "Available" : "Now"}
+                              </span>
+                            ) : (
+                              getTimeRemaining(lock.lockUntil)
+                            )}
+                          </span>
+                        </div>
+
+                        <motion.button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (lock.isUnlockable) {
+                              handleUnlock(lock.id);
+                            }
+                          }}
+                          disabled={
+                            !lock.isUnlockable ||
+                            unlockingId === lock.id ||
+                            isProcessing
+                          }
+                          className={`px-3 cursor-pointer py-1.5 h-8 text-xs font-medium rounded-xl flex items-center ${
+                            lock.isUnlockable &&
+                            unlockingId !== lock.id &&
+                            !isProcessing
+                              ? "bg-gradient-to-r from-[#004581] to-[#018ABD] hover:from-[#003b6e] hover:to-[#0179a3] text-white shadow-lg shadow-[#004581]/20"
+                              : "bg-[#0a0a20]/80 border border-[#475B74]/50 text-[#97CBDC]/50"
+                          }`}
+                          whileHover={
+                            lock.isUnlockable &&
+                            unlockingId !== lock.id &&
+                            !isProcessing
+                              ? { scale: 1.05 }
+                              : {}
+                          }
+                          whileTap={
+                            lock.isUnlockable &&
+                            unlockingId !== lock.id &&
+                            !isProcessing
+                              ? { scale: 0.95 }
+                              : {}
+                          }
+                        >
+                          {unlockingId === lock.id ? (
+                            <>
+                              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                              Unlocking
+                            </>
+                          ) : (
+                            <>
+                              <Unlock className="w-3 h-3 mr-1" />
+                              {lock.isVesting ? "Claim" : "Unlock"}
+                            </>
+                          )}
+                        </motion.button>
+                      </div>
+                    </div>
+
+                    {/* Progress bar for vesting locks */}
+                    {lock.isVesting && (
+                      <div className="mt-3 pl-13">
+                        <div className="flex justify-between text-xs text-[#97CBDC]/70 mb-1">
+                          <span>Vesting Progress</span>
+                          <span>{calculateVestingProgress(lock)}%</span>
+                        </div>
+                        <div className="h-2 bg-[#0a0a20] rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-[#004581] to-[#018ABD]"
+                            style={{
+                              width: `${calculateVestingProgress(lock)}%`,
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </motion.div>
+            ) : (
+              <EmptyState searchTerm={searchTerm} type={type} />
+            )}
           </div>
         </motion.div>
       )}
@@ -1328,7 +1311,7 @@ export default function TokenLockList({ type = "token" }) {
             onClick={() => setShowLockDetails(false)}
           >
             <motion.div
-              className="bg-gradient-to-b from-[#1D2538]/90 to-[#1D2538] rounded-3xl max-w-md w-full overflow-hidden border border-[#475B74]/50 shadow-2xl"
+              className="bg-gradient-to-b from-[#1D2538]/90 to-[#1D2538] rounded-2xl max-w-md w-full overflow-hidden border border-[#475B74]/50 shadow-2xl"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}

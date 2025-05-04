@@ -17,9 +17,9 @@ export function LaunchProvider({ children }) {
 
     // Launch Configuration
     launchType: "fair",
-    dex: "PancakeSwap V2",
-    currency: "TBNB",
-    fee: "0.015 TBNB",
+    dex: "Zentra V2",
+    currency: "",
+    fee: "0.015",
     totalSaleAmount: "",
     refundType: "Burn",
     softcap: "",

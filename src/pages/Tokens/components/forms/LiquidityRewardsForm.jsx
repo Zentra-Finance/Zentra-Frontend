@@ -43,8 +43,8 @@ export default function LiquidityRewardsForm({
           </TooltipProvider>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {["ZENTRA-v2", "ZENTRA-v3", "uniswap-v2"].map((router) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {["ZENTRA-v2", "ZENTRA-v3"].map((router) => (
             <button
               key={router}
               type="button"
@@ -61,7 +61,6 @@ export default function LiquidityRewardsForm({
               )}
               {router === "ZENTRA-v2" && "ZENTRA V2"}
               {router === "ZENTRA-v3" && "ZENTRA V3"}
-              {router === "uniswap-v2" && "Uniswap V2"}
             </button>
           ))}
         </div>
@@ -101,7 +100,8 @@ export default function LiquidityRewardsForm({
             value={formState.liquidityBuyFee}
             onChange={handleInputChange}
             placeholder="0"
-            className="bg-[#1D2538]/70 border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-[#018ABD] transition-all duration-200"
+            disabled={formState.dexRouter === "ZENTRA-v3"}
+            className="bg-[#1D2538]/70 text-white border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-[#018ABD] transition-all duration-200"
           />
         </div>
         <div>
@@ -129,7 +129,8 @@ export default function LiquidityRewardsForm({
             value={formState.liquiditySellFee}
             onChange={handleInputChange}
             placeholder="0"
-            className="bg-[#1D2538]/70 border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-[#018ABD] transition-all duration-200"
+            disabled={formState.dexRouter === "ZENTRA-v3"}
+            className="bg-[#1D2538]/70 text-white border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-[#018ABD] transition-all duration-200"
           />
         </div>
       </div>
@@ -154,7 +155,7 @@ export default function LiquidityRewardsForm({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {["project-token", "bnb", "eth"].map((token) => (
+          {["project-token", "ptt"].map((token) => (
             <button
               key={token}
               type="button"
@@ -170,8 +171,7 @@ export default function LiquidityRewardsForm({
                 <Check className="h-4 w-4 mr-2" />
               )}
               {token === "project-token" && "Project Token"}
-              {token === "bnb" && "BNB"}
-              {token === "eth" && "ETH"}
+              {token === "ptt" && "PTT"}
             </button>
           ))}
         </div>
@@ -179,6 +179,15 @@ export default function LiquidityRewardsForm({
         <div className="mt-4 text-sm text-[#97CBDC]">
           The token you would like users to receive their rewards in. This can
           be your Project Token or ETH/BNB if you use a V2 DEX.
+          {formState.dexRouter === "ZENTRA-v3" &&
+            formState.rewardsToken !== "project-token" && (
+              <div className="mt-2 text-red-400 flex items-start">
+                <AlertCircle className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
+                <span>
+                  Reward tokens other than Project Token only work with V2 DEX
+                </span>
+              </div>
+            )}
         </div>
       </div>
 
@@ -208,7 +217,11 @@ export default function LiquidityRewardsForm({
             value={formState.buyRewards}
             onChange={handleInputChange}
             placeholder="0"
-            className="bg-[#1D2538]/70 border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-purple-500 transition-all duration-200"
+            disabled={
+              formState.dexRouter === "ZENTRA-v3" &&
+              formState.rewardsToken !== "project-token"
+            }
+            className="bg-[#1D2538]/70 text-white border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-purple-500 transition-all duration-200"
           />
         </div>
         <div>
@@ -236,7 +249,11 @@ export default function LiquidityRewardsForm({
             value={formState.sellRewards}
             onChange={handleInputChange}
             placeholder="0"
-            className="bg-[#1D2538]/70 border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-purple-500 transition-all duration-200"
+            disabled={
+              formState.dexRouter === "ZENTRA-v3" &&
+              formState.rewardsToken !== "project-token"
+            }
+            className="bg-[#1D2538]/70 text-white border-[#475B74]/50 rounded-lg placeholder:text-[#97CBDC]/50 focus:border-purple-500 transition-all duration-200"
           />
         </div>
       </div>

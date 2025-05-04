@@ -1,4 +1,3 @@
-"use client";
 
 import { LaunchProvider } from "@/providers/FairLaunchProvider";
 import FairLaunchForm from "./components/FairLaunchForm";
