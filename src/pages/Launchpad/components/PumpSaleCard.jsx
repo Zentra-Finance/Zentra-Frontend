@@ -212,7 +212,7 @@ export function PumpSaleCard({ launch, isHovered }) {
             ></motion.div>
           </div>
 
-          <div className="flex items-center justify-between">
+          {/* <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-[#97CBDC]" />
               <span className="text-sm text-[#97CBDC]">Start Time:</span>
@@ -220,7 +220,7 @@ export function PumpSaleCard({ launch, isHovered }) {
             <span className="text-sm font-medium bg-[#1D2538] px-3 py-1 rounded-full text-[#DDEEFF]">
               {launch.startTime}
             </span>
-          </div>
+          </div> */}
 
           <motion.div
             animate={{

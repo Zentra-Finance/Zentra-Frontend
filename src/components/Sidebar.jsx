@@ -25,13 +25,13 @@ import { ZentraLogo } from "./ZentraLogo";
 // Navigation items with icons
 const viewItems = [
   { id: "launchpad", name: "Launchpad", href: "/launchpad", icon: Rocket },
-  { id: "defi", name: "$DEFI 🔥", href: "/defi", icon: BarChart3 },
+  // { id: "defi", name: "$ZTR 🔥", href: "/defi", icon: BarChart3 },
   { id: "staking", name: "Staking", href: "/staking", icon: Coins },
   { id: "portfolio", name: "Portfolio", href: "/portfolio", icon: Wallet },
 ];
 
 const createItems = [
-  { id: "meme-coin", name: "Meme Coin 🔥", href: "/token", icon: Coins },
+  { id: "meme-coin", name: "Create Token", href: "/token", icon: Coins },
   { id: "fair-launch", name: "Fair Launch", href: "/fair-launch", icon: Users },
   {
     id: "pump-launch",
@@ -88,7 +88,7 @@ function Header() {
 
           <button className="hidden p-2 text-center rounded-lg bg-gradient-to-r from-[#018ABD] to-[#97CBDC] text-sm font-medium text-white hover:opacity-90 md:flex">
             <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-            BUY $DEFI
+            BUY $ZTR
           </button>
 
           <ConnectWallet />
@@ -130,7 +130,7 @@ function Header() {
             </div>
             <button className="mt-3 w-full rounded-lg bg-gradient-to-r from-[#018ABD] to-[#97CBDC] py-2 text-sm font-medium text-white hover:opacity-90">
               <Sparkles className="mr-1.5 h-4 w-4" />
-              BUY $DEFI
+              BUY $ZTR
             </button>
           </nav>
         </div>
@@ -350,7 +350,7 @@ export function ZentraSidebar({ collapsed, setCollapsed }) {
               Boost your token launch
             </p>
             <button className="w-full py-2 px-4 bg-gradient-to-r from-[#018ABD] to-[#97CBDC] text-white rounded-lg text-sm font-medium hover:opacity-90">
-              Buy $DEFI
+              Buy $ZTR
             </button>
           </div>
         )}
