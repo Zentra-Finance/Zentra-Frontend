@@ -133,7 +133,7 @@ function formatCryptoPrice(price) {
 	return price.toFixed(8);
 }
 
-export function BoundingTradingChart({
+export function BondingTradingChart({
 	tokenAddress,
 	pairAddress,
 	initialData = null,
