@@ -204,7 +204,7 @@ export function useBondingContract(contractAddress) {
     setShouldFetch(true);
     setIsLoading(true);
     setError(null);
-    toast.loading("Fetching contract info...");
+    // toast.loading("Fetching contract info...");
   }, [isValidAddress]);
 
   // Enhanced swap function
@@ -577,7 +577,7 @@ export function useBondingContract(contractAddress) {
 
             setIsLoading(false);
             toast.dismiss();
-            toast.success("Contract info loaded successfully");
+            // toast.success("Contract info loaded successfully");
           } catch (error) {
             console.error("Error calculating market cap:", error);
             setError("Error calculating market cap");
